@@ -22,3 +22,4 @@ go.work
 
 # config file for testing
 *config
+*.pem
