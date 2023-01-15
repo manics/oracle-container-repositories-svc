@@ -23,14 +23,32 @@ import (
 var (
 	listReposRe = regexp.MustCompile(`^\/repos$`)
 	repoRe      = regexp.MustCompile(`^\/repo\/(\S+)$`)
+	Version     string
 )
 
 type artifactsHandler struct {
-	compartmentId *string
+	compartmentId string
 	client        *artifacts.ArtifactsClient
+	authToken     string
 }
 
 func (h *artifactsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	authorised := false
+	if h.authToken == "" {
+		authorised = true
+	} else {
+		authHeader := r.Header.Get("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			authToken := strings.TrimPrefix(authHeader, "Bearer ")
+			authorised = (authToken == h.authToken)
+		}
+	}
+
+	if !authorised {
+		notAuthorised(w, r)
+		return
+	}
+
 	w.Header().Set("content-type", "application/json")
 	switch {
 	case r.Method == http.MethodGet && listReposRe.MatchString(r.URL.Path):
@@ -54,7 +72,7 @@ func (h *artifactsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (c *artifactsHandler) List(w http.ResponseWriter, r *http.Request) {
 	log.Println("Listing repos")
 	repos, err := c.client.ListContainerRepositories(context.Background(), artifacts.ListContainerRepositoriesRequest{
-		CompartmentId: c.compartmentId,
+		CompartmentId: &c.compartmentId,
 	})
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -78,7 +96,7 @@ func (c *artifactsHandler) getByName(urlPath string) (*artifacts.ContainerReposi
 	name := strings.TrimPrefix(urlPath, "/repo/")
 
 	repos, err := c.client.ListContainerRepositories(context.Background(), artifacts.ListContainerRepositoriesRequest{
-		CompartmentId: c.compartmentId,
+		CompartmentId: &c.compartmentId,
 		DisplayName:   &name,
 	})
 	if err != nil {
@@ -139,7 +157,7 @@ func (c *artifactsHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	createResponse, err := c.client.CreateContainerRepository(context.Background(), artifacts.CreateContainerRepositoryRequest{
 		CreateContainerRepositoryDetails: artifacts.CreateContainerRepositoryDetails{
-			CompartmentId: c.compartmentId,
+			CompartmentId: &c.compartmentId,
 			DisplayName:   name,
 		},
 	})
@@ -176,7 +194,6 @@ func (c *artifactsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		// w.Write([]byte("null"))
 		return
 	}
 }
@@ -191,6 +208,34 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("notFound %r", r)
 	w.WriteHeader(http.StatusNotFound)
 	w.Write([]byte("not found"))
+}
+
+func notAuthorised(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("notAuthorised %r", r)
+	w.WriteHeader(http.StatusForbidden)
+	w.Write([]byte("not authorised"))
+}
+
+type healthHandler struct {
+}
+
+func (h *healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
+	if r.Method == http.MethodGet && r.URL.Path == "/health" {
+		versionInfo := map[string]string{
+			"version": Version,
+		}
+		jsonBytes, err := json.Marshal(versionInfo)
+		if err != nil {
+			internalServerError(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonBytes)
+	} else {
+		notFound(w, r)
+		return
+	}
 }
 
 func main() {
@@ -220,14 +265,22 @@ func main() {
 	}
 	log.Println("Compartment ID:", compartmentId)
 
+	authToken, found := os.LookupEnv("AUTH_TOKEN")
+	if !found {
+		log.Fatalln("AUTH_TOKEN not found, set it to a secret token or '' to disable authentication")
+	}
+	log.Println("Auth token:", authToken)
+
 	mux := http.NewServeMux()
 	artifactsH := &artifactsHandler{
-		compartmentId: &compartmentId,
+		compartmentId: compartmentId,
 		client:        &artifactsClient,
+		authToken:     authToken,
 	}
 
 	mux.Handle("/repos", artifactsH)
 	mux.Handle("/repo/", artifactsH)
+	mux.Handle("/health", &healthHandler{})
 
-	http.ListenAndServe("localhost:8080", mux)
+	http.ListenAndServe("0.0.0.0:8080", mux)
 }
