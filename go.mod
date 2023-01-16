@@ -1,4 +1,4 @@
-module oci-test/containers
+module github.com/manics/oracle-container-repositories-svc
 
 go 1.18
 

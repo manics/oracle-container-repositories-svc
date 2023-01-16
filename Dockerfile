@@ -16,11 +16,11 @@ RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make build
 ###########################################################################
 FROM alpine:3.17
 
-COPY --from=build /src/oci-container-repositories /bin
+COPY --from=build /src/oracle-container-repositories-svc /bin
 
 RUN adduser -S -D -H -h /app appuser
 USER appuser
 
-ENTRYPOINT ["/bin/oci-container-repositories"]
+ENTRYPOINT ["/bin/oracle-container-repositories-svc"]
 
 EXPOSE 8080
