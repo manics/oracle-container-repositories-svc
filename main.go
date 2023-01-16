@@ -26,9 +26,17 @@ var (
 	Version     string
 )
 
+type IArtifactsClient interface {
+	ListContainerRepositories(ctx context.Context, request artifacts.ListContainerRepositoriesRequest) (response artifacts.ListContainerRepositoriesResponse, err error)
+
+	CreateContainerRepository(ctx context.Context, request artifacts.CreateContainerRepositoryRequest) (response artifacts.CreateContainerRepositoryResponse, err error)
+
+	DeleteContainerRepository(ctx context.Context, request artifacts.DeleteContainerRepositoryRequest) (response artifacts.DeleteContainerRepositoryResponse, err error)
+}
+
 type artifactsHandler struct {
 	compartmentId string
-	client        *artifacts.ArtifactsClient
+	client        IArtifactsClient
 	authToken     string
 }
 
@@ -87,11 +95,11 @@ func (c *artifactsHandler) List(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
-func (c *artifactsHandler) getByName(urlPath string) (*artifacts.ContainerRepositorySummary, *string, error) {
+func (c *artifactsHandler) getByName(urlPath string) (*artifacts.ContainerRepositorySummary, string, error) {
 	if !strings.HasPrefix(urlPath, "/repo/") {
 		err := fmt.Sprintf("Invalid path: %s", urlPath)
 		log.Println(err)
-		return nil, nil, errors.New(err)
+		return nil, "", errors.New(err)
 	}
 	name := strings.TrimPrefix(urlPath, "/repo/")
 
@@ -101,14 +109,14 @@ func (c *artifactsHandler) getByName(urlPath string) (*artifacts.ContainerReposi
 	})
 	if err != nil {
 		log.Println("Error:", err)
-		return nil, nil, err
+		return nil, "", err
 	}
 	if len(repos.Items) == 0 {
 		log.Printf("Repo '%s' not found\n", name)
-		return nil, &name, nil
+		return nil, name, nil
 	} else {
 		log.Printf("Repo '%s' found: %s\n", name, *repos.Items[0].Id)
-		return &repos.Items[0], &name, nil
+		return &repos.Items[0], name, nil
 	}
 }
 
@@ -153,12 +161,12 @@ func (c *artifactsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Creating repo", *name)
+	log.Println("Creating repo", name)
 
 	createResponse, err := c.client.CreateContainerRepository(context.Background(), artifacts.CreateContainerRepositoryRequest{
 		CreateContainerRepositoryDetails: artifacts.CreateContainerRepositoryDetails{
 			CompartmentId: &c.compartmentId,
-			DisplayName:   name,
+			DisplayName:   &name,
 		},
 	})
 
@@ -184,7 +192,7 @@ func (c *artifactsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if repo != nil {
-		log.Println("Deleting repo", *name)
+		log.Println("Deleting repo", name)
 
 		_, err := c.client.DeleteContainerRepository(context.Background(), artifacts.DeleteContainerRepositoryRequest{
 			RepositoryId: repo.Id,
