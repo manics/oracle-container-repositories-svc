@@ -32,6 +32,8 @@ jobs:
         run: go test
 
   container:
+    needs:
+      - build
     runs-on: ubuntu-latest
     steps:
 
