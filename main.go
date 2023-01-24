@@ -18,6 +18,7 @@ import (
 	// "github.com/oracle/oci-go-sdk/identity"
 	"github.com/oracle/oci-go-sdk/v65/artifacts"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/common/auth"
 )
 
 var (
@@ -247,13 +248,25 @@ func (h *healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	if len(os.Args[1:]) != 1 {
-		log.Fatalf("Usage: %s oci-config-file\n", os.Args[0])
-	}
-	cfg_file := os.Args[1]
-	cfg, err := common.ConfigurationProviderFromFile(cfg_file, "")
-	if err != nil {
-		log.Fatal(err)
+	var cfg common.ConfigurationProvider
+	var err error
+
+	if len(os.Args[1:]) == 0 {
+		// Instance principals (like AWS instance roles)
+		// https://github.com/oracle/oci-go-sdk/blob/v65.28.1/example/example_instance_principals_test.go
+		cfg, err = auth.InstancePrincipalConfigurationProvider()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else if len(os.Args[1:]) == 1 {
+		// User principals, using configuration file
+		cfg_file := os.Args[1]
+		cfg, err = common.ConfigurationProviderFromFile(cfg_file, "")
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Fatalf("Usage: %s [oci-config-file]\n", os.Args[0])
 	}
 
 	// The OCID of the tenancy containing the compartment.
