@@ -42,12 +42,19 @@ jobs:
         # with:
         #   fetch-depth: 0
 
-      - name: Get other tags
-        id: gettags
-        uses: jupyterhub/action-major-minor-tag-calculator@v2
+      # - name: Get other tags
+      #   id: gettags
+      #   uses: jupyterhub/action-major-minor-tag-calculator@v2
+      #   with:
+      #     githubToken: ${{ secrets.GITHUB_TOKEN }}
+      #     prefix: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
         with:
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:"
+          flavor: latest=false
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -72,7 +79,9 @@ jobs:
           # Needed so that .git directory is available to embed version info
           context: .
           platforms: ${{ env.PLATFORMS }}
-          tags: ${{ join(fromJson(steps.gettags.outputs.tags)) }}
+          # tags: ${{ join(fromJson(steps.gettags.outputs.tags)) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           push: >
             ${{
               github.event_name == 'push' &&
