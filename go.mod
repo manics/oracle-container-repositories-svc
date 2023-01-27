@@ -2,10 +2,7 @@ module github.com/manics/oracle-container-repositories-svc
 
 go 1.18
 
-require (
-	github.com/oracle/oci-go-sdk v24.3.0+incompatible
-	github.com/oracle/oci-go-sdk/v65 v65.28.0
-)
+require github.com/oracle/oci-go-sdk/v65 v65.28.2
 
 require (
 	github.com/gofrs/flock v0.8.1 // indirect
