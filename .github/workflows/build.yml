@@ -16,6 +16,13 @@ env:
   PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+      - uses: pre-commit/action@v3.0.0
+
   build:
     runs-on: ubuntu-latest
 
@@ -25,18 +32,20 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.18.x'
+          go-version: "1.18.x"
+
       - name: Build
         run: go build -v
+
       - name: Test with the Go CLI
         run: go test
 
   container:
     needs:
+      - lint
       - build
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v3
         # with:
