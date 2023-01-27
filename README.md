@@ -9,7 +9,7 @@ This avoids the need to integrate OCI API libraries into BinderHub.
 
 # Example
 
-Build and run:
+Build and run locally:
 
 ```
 podman build -t oracle-container-repositories-svc .
@@ -51,6 +51,19 @@ Delete repository `test` (ignores repositories that don't exist)
 
 ```
 curl -XDELETE -H'Authorization: Bearer secret-token' localhost:8080/repo/test
+```
+
+# BinderHub example
+
+Deploy the Helm chart, see [`Values.yaml`](./helm-chart/values.yaml) for configuration options.
+
+Append this example [BinderHub configuration](binderhub-example/binderhub_config.py) to your BinderHub `extraConfig` section.
+For example:
+
+```yaml
+extraConfig:
+  10-external-registry-helper: |
+    <binderhub-example/binderhub_config.py>
 ```
 
 # Development
