@@ -190,7 +190,7 @@ func (c *artifactsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Setup(mux *http.ServeMux) {
+func Setup(mux *http.ServeMux) error {
 	var cfg common.ConfigurationProvider
 	var err error
 
@@ -199,28 +199,30 @@ func Setup(mux *http.ServeMux) {
 		// https://github.com/oracle/oci-go-sdk/blob/v65.28.1/example/example_instance_principals_test.go
 		cfg, err = auth.InstancePrincipalConfigurationProvider()
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("failed to load configuration, %v", err)
+			return err
 		}
 	} else if len(os.Args[1:]) == 1 {
 		// User principals, using configuration file
 		cfg_file := os.Args[1]
 		cfg, err = common.ConfigurationProviderFromFile(cfg_file, "")
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("failed to load configuration, %v", err)
+			return err
 		}
 	} else {
-		log.Fatalf("Usage: %s [oci-config-file]\n", os.Args[0])
+		return errors.New("arguments: [oci-config-file]")
 	}
 
 	// The OCID of the tenancy containing the compartment.
 	tenancyID, err := cfg.TenancyOCID()
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	artifactsClient, err := artifacts.NewArtifactsClientWithConfigurationProvider(cfg)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	compartmentId := os.Getenv("OCI_COMPARTMENT_ID")
@@ -237,4 +239,5 @@ func Setup(mux *http.ServeMux) {
 
 	mux.Handle("/repos", authorizedH)
 	mux.Handle("/repo/", authorizedH)
+	return nil
 }

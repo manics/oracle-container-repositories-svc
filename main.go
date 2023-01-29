@@ -46,7 +46,10 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/health", &healthHandler{})
-	oracle.Setup(mux)
+	err := oracle.Setup(mux)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	listen := "0.0.0.0:8080"
 	log.Printf("Listening on %v\n", listen)
