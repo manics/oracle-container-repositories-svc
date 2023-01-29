@@ -9,3 +9,6 @@ require (
 	github.com/sony/gobreaker v0.5.0 // indirect
 	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
 )
+
+replace github.com/manics/oracle-container-repositories-svc/oracle => ./oracle
+replace github.com/manics/oracle-container-repositories-svc/utils => ../utils

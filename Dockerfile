@@ -6,9 +6,7 @@ FROM --platform=$BUILDPLATFORM golang:1.18-alpine AS build
 RUN apk add --no-cache make git
 
 WORKDIR /src
-COPY go.* *.go Makefile ./
-# Needed for version info
-COPY .git ./.git
+COPY . ./
 
 ARG TARGETOS TARGETARCH
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make build
