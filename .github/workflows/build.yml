@@ -83,7 +83,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push to container registry
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           # Needed so that .git directory is available to embed version info
           context: .
