@@ -15,8 +15,8 @@ import (
 
 	"context"
 
-	// "github.com/oracle/oci-go-sdk/identity"
 	"github.com/manics/oracle-container-repositories-svc/utils"
+	"github.com/oracle/oci-go-sdk/identity"
 	"github.com/oracle/oci-go-sdk/v65/artifacts"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/common/auth"
@@ -105,12 +105,14 @@ func (c *artifactsHandler) getByName(urlPath string) (*artifacts.ContainerReposi
 }
 
 func (c *artifactsHandler) Get(w http.ResponseWriter, r *http.Request) {
-	repo, _, err := c.getByName(r.URL.Path)
+	repo, name, err := c.getByName(r.URL.Path)
 	if err != nil {
 		log.Println("Error:", err)
 		utils.InternalServerError(w, r)
 		return
 	}
+
+	log.Printf("Getting repo %s", name)
 
 	if repo == nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -190,11 +192,11 @@ func (c *artifactsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Setup(mux *http.ServeMux) error {
+func Setup(mux *http.ServeMux, args []string) error {
 	var cfg common.ConfigurationProvider
 	var err error
 
-	if len(os.Args[1:]) == 0 {
+	if len(args) == 0 {
 		// Instance principals (like AWS instance roles)
 		// https://github.com/oracle/oci-go-sdk/blob/v65.28.1/example/example_instance_principals_test.go
 		cfg, err = auth.InstancePrincipalConfigurationProvider()
@@ -202,9 +204,9 @@ func Setup(mux *http.ServeMux) error {
 			log.Printf("failed to load configuration, %v", err)
 			return err
 		}
-	} else if len(os.Args[1:]) == 1 {
+	} else if len(args) == 1 {
 		// User principals, using configuration file
-		cfg_file := os.Args[1]
+		cfg_file := args[0]
 		cfg, err = common.ConfigurationProviderFromFile(cfg_file, "")
 		if err != nil {
 			log.Printf("failed to load configuration, %v", err)
@@ -219,6 +221,18 @@ func Setup(mux *http.ServeMux) error {
 	if err != nil {
 		return err
 	}
+
+	identityClient, err := identity.NewIdentityClientWithConfigurationProvider(cfg)
+	if err != nil {
+		return err
+	}
+	comp, err := identityClient.GetCompartment(context.Background(), identity.GetCompartmentRequest{
+		CompartmentId: &tenancyID,
+	})
+	if err != nil {
+		return err
+	}
+	log.Printf("Compartment: %v\n", comp.Compartment)
 
 	artifactsClient, err := artifacts.NewArtifactsClientWithConfigurationProvider(cfg)
 	if err != nil {

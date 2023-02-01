@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/manics/oracle-container-repositories-svc/amazon"
 	"github.com/manics/oracle-container-repositories-svc/oracle"
 	"github.com/manics/oracle-container-repositories-svc/utils"
 )
@@ -44,9 +45,23 @@ func main() {
 		log.Fatalln("AUTH_TOKEN not found, set it to a secret token or '' to disable authentication")
 	}
 
+	if len(os.Args) < 2 {
+		log.Fatalf("Usage: %s [amazon|oracle] ...\n", os.Args[0])
+	}
+
 	mux := http.NewServeMux()
 	mux.Handle("/health", &healthHandler{})
-	err := oracle.Setup(mux)
+
+	provider := os.Args[1]
+	var err error
+	switch provider {
+	case "amazon":
+		err = amazon.Setup(mux, os.Args[2:])
+	case "oracle":
+		err = oracle.Setup(mux, os.Args[2:])
+	default:
+		log.Fatalf("Unknown provider: %s\n", provider)
+	}
 	if err != nil {
 		log.Fatalln(err)
 	}

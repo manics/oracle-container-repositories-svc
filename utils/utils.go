@@ -6,7 +6,13 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
+
+type RegistryToken struct {
+	Token   string    `json:"token"`
+	Expires time.Time `json:"expires"`
+}
 
 func CheckAuthorised(originalHandler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -37,17 +43,23 @@ func CheckAuthorised(originalHandler http.Handler) http.Handler {
 func InternalServerError(w http.ResponseWriter, r *http.Request) {
 	log.Println("ERROR: %r", r)
 	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte("\"internal server error\""))
+	w.Write([]byte("internal server error\n"))
+}
+
+func ClientError(w http.ResponseWriter, r *http.Request, err string) {
+	log.Println("ERROR: %r", r)
+	w.WriteHeader(http.StatusBadRequest)
+	w.Write([]byte(fmt.Sprintf("client error: %v\n", err)))
 }
 
 func NotFound(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("NotFound %r", r)
 	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("not found"))
+	w.Write([]byte("not found\n"))
 }
 
 func NotAuthorised(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("NotAuthorised %r", r)
 	w.WriteHeader(http.StatusForbidden)
-	w.Write([]byte("not authorised"))
+	w.Write([]byte("not authorised\n"))
 }
