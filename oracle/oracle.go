@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strings"
 
 	"context"
 
@@ -25,10 +24,13 @@ import (
 var (
 	listReposRe = regexp.MustCompile(`^\/repos$`)
 	repoRe      = regexp.MustCompile(`^\/repo\/(\S+)$`)
+	imageRe     = regexp.MustCompile(`^\/image\/(\S+)$`)
 )
 
 type IArtifactsClient interface {
 	ListContainerRepositories(ctx context.Context, request artifacts.ListContainerRepositoriesRequest) (response artifacts.ListContainerRepositoriesResponse, err error)
+
+	ListContainerImages(ctx context.Context, request artifacts.ListContainerImagesRequest) (response artifacts.ListContainerImagesResponse, err error)
 
 	CreateContainerRepository(ctx context.Context, request artifacts.CreateContainerRepositoryRequest) (response artifacts.CreateContainerRepositoryResponse, err error)
 
@@ -47,7 +49,10 @@ func (h *artifactsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.List(w, r)
 		return
 	case r.Method == http.MethodGet && repoRe.MatchString(r.URL.Path):
-		h.Get(w, r)
+		h.GetRepo(w, r)
+		return
+	case r.Method == http.MethodGet && imageRe.MatchString(r.URL.Path):
+		h.GetImage(w, r)
 		return
 	case r.Method == http.MethodPost && repoRe.MatchString(r.URL.Path):
 		h.Create(w, r)
@@ -79,13 +84,12 @@ func (c *artifactsHandler) List(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
-func (c *artifactsHandler) getByName(urlPath string) (*artifacts.ContainerRepositorySummary, string, error) {
-	if !strings.HasPrefix(urlPath, "/repo/") {
-		err := fmt.Sprintf("Invalid path: %s", urlPath)
+func (c *artifactsHandler) getByName(r *http.Request) (*artifacts.ContainerRepositorySummary, string, error) {
+	name, err := utils.RepoGetName(r)
+	if err != nil {
 		log.Println(err)
-		return nil, "", errors.New(err)
+		return nil, "", err
 	}
-	name := strings.TrimPrefix(urlPath, "/repo/")
 
 	repos, err := c.client.ListContainerRepositories(context.Background(), artifacts.ListContainerRepositoriesRequest{
 		CompartmentId: &c.compartmentId,
@@ -104,8 +108,8 @@ func (c *artifactsHandler) getByName(urlPath string) (*artifacts.ContainerReposi
 	}
 }
 
-func (c *artifactsHandler) Get(w http.ResponseWriter, r *http.Request) {
-	repo, name, err := c.getByName(r.URL.Path)
+func (c *artifactsHandler) GetRepo(w http.ResponseWriter, r *http.Request) {
+	repo, name, err := c.getByName(r)
 	if err != nil {
 		log.Println("Error:", err)
 		utils.InternalServerError(w, r)
@@ -128,22 +132,49 @@ func (c *artifactsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (c *artifactsHandler) Create(w http.ResponseWriter, r *http.Request) {
-	repo, name, err := c.getByName(r.URL.Path)
+func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
+	repoName, tag, err := utils.ImageGetNameAndTag(r)
 	if err != nil {
-		log.Println("Error:", err)
+		log.Printf("ERROR: %v\n", err)
 		utils.InternalServerError(w, r)
+	}
+	fullname := fmt.Sprintf("%s:%s", repoName, tag)
+
+	log.Printf("Getting image %s", fullname)
+
+	images, err := c.client.ListContainerImages(context.Background(), artifacts.ListContainerImagesRequest{
+		CompartmentId:  &c.compartmentId,
+		DisplayName:    &fullname,
+		RepositoryName: &repoName,
+	})
+	if err != nil {
+		log.Println("ERROR:", err)
+		utils.InternalServerError(w, r)
+	}
+
+	if len(images.Items) == 0 {
+		log.Printf("Image '%s' not found\n", fullname)
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("null"))
 		return
 	}
 
-	if repo != nil {
-		jsonBytes, err := json.Marshal(repo)
-		if err != nil {
-			utils.InternalServerError(w, r)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(jsonBytes)
+	image := images.Items[0]
+	log.Printf("Image '%s' found: %s\n", fullname, *image.Id)
+	jsonBytes, err := json.Marshal(image)
+	if err != nil {
+		utils.InternalServerError(w, r)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonBytes)
+}
+
+func (c *artifactsHandler) Create(w http.ResponseWriter, r *http.Request) {
+	name, err := utils.RepoGetName(r)
+	if err != nil {
+		log.Println("ERROR:", err)
+		utils.InternalServerError(w, r)
 		return
 	}
 
@@ -157,11 +188,42 @@ func (c *artifactsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		utils.InternalServerError(w, r)
+		log.Printf("ERROR: %v\n", err)
+		serviceErr, ok := common.IsServiceError(err)
+		if ok && serviceErr.GetCode() == "NAMESPACE_CONFLICT" {
+			log.Printf("Repository already exists: %v\n", err)
+
+			repo, name, err := c.getByName(r)
+			if err != nil {
+				log.Println("Error:", err)
+				utils.InternalServerError(w, r)
+				return
+			}
+
+			if repo == nil {
+				log.Printf("NAMESPACE_CONFLICT but repository not found %s: %v", name, err)
+				utils.InternalServerError(w, r)
+				return
+			}
+
+			jsonBytes, err := json.Marshal(repo)
+			if err != nil {
+				log.Printf("ERROR: %v\n", err)
+				utils.InternalServerError(w, r)
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(jsonBytes)
+			return
+		}
+
 		return
 	}
+
 	jsonBytes, err := json.Marshal(createResponse.ContainerRepository)
 	if err != nil {
+		log.Printf("ERROR: %v\n", err)
 		utils.InternalServerError(w, r)
 		return
 	}
@@ -170,9 +232,9 @@ func (c *artifactsHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *artifactsHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	repo, name, err := c.getByName(r.URL.Path)
+	repo, name, err := c.getByName(r)
 	if err != nil {
-		log.Println("Error:", err)
+		log.Println("ERROR:", err)
 		utils.InternalServerError(w, r)
 		return
 	}
@@ -253,5 +315,6 @@ func Setup(mux *http.ServeMux, args []string) error {
 
 	mux.Handle("/repos", authorizedH)
 	mux.Handle("/repo/", authorizedH)
+	mux.Handle("/image/", authorizedH)
 	return nil
 }

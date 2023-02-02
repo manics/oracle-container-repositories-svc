@@ -57,3 +57,54 @@ func TestCheckAuthorised(t *testing.T) {
 		})
 	}
 }
+
+func TestGetName(t *testing.T) {
+	{
+		req := httptest.NewRequest("GET", "/existing-image", nil)
+		_, err := RepoGetName(req)
+		if err == nil {
+			t.Errorf("Expected error: %v", err)
+		}
+	}
+
+	{
+		req := httptest.NewRequest("GET", "/repo/existing-image", nil)
+		r, err := RepoGetName(req)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if r != "existing-image" {
+			t.Errorf("Unexpected repository name: %v", r)
+		}
+	}
+}
+
+func TestImageGetNameAndTag(t *testing.T) {
+	{
+		req := httptest.NewRequest("GET", "/image/existing-image", nil)
+		name, tag, err := ImageGetNameAndTag(req)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if name != "existing-image" {
+			t.Errorf("Unexpected image name: %v", name)
+		}
+		if tag != "latest" {
+			t.Errorf("Unexpected image tag: %v", tag)
+		}
+	}
+
+	{
+		req := httptest.NewRequest("GET", "/image/existing-image:tag", nil)
+		name, tag, err := ImageGetNameAndTag(req)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if name != "existing-image" {
+			t.Errorf("Unexpected image name: %v", name)
+		}
+		if tag != "tag" {
+			t.Errorf("Unexpected image tag: %v", tag)
+		}
+	}
+}

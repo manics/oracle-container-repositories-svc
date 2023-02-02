@@ -126,7 +126,7 @@ func (c *ecrHandler) getRepoByName(name string) (*types.Repository, error) {
 func (c *ecrHandler) getRepositoryAsJson(r *http.Request) (bool, string, []byte, error) {
 	null := []byte("null")
 
-	name, err := c.getName(r)
+	name, err := utils.RepoGetName(r)
 	if err != nil {
 		return false, name, null, err
 	}
@@ -166,19 +166,12 @@ func (c *ecrHandler) GetRepo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
-	if !strings.HasPrefix(r.URL.Path, "/image/") {
-		log.Printf("Invalid path: %s\n", r.URL.Path)
+	repoName, tag, err := utils.ImageGetNameAndTag(r)
+	if err != nil {
+		log.Printf("ERROR: %v\n", err)
 		utils.InternalServerError(w, r)
-		return
 	}
-	fullname := strings.TrimPrefix(r.URL.Path, "/image/")
-	repoName := fullname
-	tag := "latest"
-	sep := strings.LastIndex(fullname, ":")
-	if sep > -1 {
-		repoName = fullname[:sep]
-		tag = fullname[sep+1:]
-	}
+	fullname := fmt.Sprintf("%s:%s", repoName, tag)
 
 	input := ecr.DescribeImagesInput{
 		RepositoryName: &repoName,
@@ -214,7 +207,7 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ecrHandler) Create(w http.ResponseWriter, r *http.Request) {
-	name, err := c.getName(r)
+	name, err := utils.RepoGetName(r)
 	if err != nil {
 		log.Println("Error:", err)
 		utils.InternalServerError(w, r)
@@ -268,7 +261,7 @@ func (c *ecrHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ecrHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	name, err := c.getName(r)
+	name, err := utils.RepoGetName(r)
 	if err != nil {
 		log.Println("Error:", err)
 		utils.InternalServerError(w, r)

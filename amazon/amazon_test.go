@@ -204,32 +204,6 @@ func TestList(t *testing.T) {
 	}
 }
 
-func TestGetName(t *testing.T) {
-	e := &ecrHandler{
-		registryId: registryId,
-		client:     &MockEcrClient{},
-	}
-
-	{
-		req := httptest.NewRequest("GET", "/existing-image", nil)
-		_, err := e.getName(req)
-		if err == nil {
-			t.Errorf("Expected error: %v", err)
-		}
-	}
-
-	{
-		req := httptest.NewRequest("GET", "/repo/existing-image", nil)
-		r, err := e.getName(req)
-		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
-		if r != "existing-image" {
-			t.Errorf("Unexpected repository name: %v", r)
-		}
-	}
-}
-
 func TestGetByName(t *testing.T) {
 	e := &ecrHandler{
 		registryId: registryId,

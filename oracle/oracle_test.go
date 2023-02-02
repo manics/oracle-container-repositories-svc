@@ -15,9 +15,10 @@ import (
 // Helpers
 
 type MockArtifactsClient struct {
-	listRequests   []artifacts.ListContainerRepositoriesRequest
-	createRequests []artifacts.CreateContainerRepositoryRequest
-	deleteRequests []artifacts.DeleteContainerRepositoryRequest
+	listRequests       []artifacts.ListContainerRepositoriesRequest
+	listImagesRequests []artifacts.ListContainerImagesRequest
+	createRequests     []artifacts.CreateContainerRepositoryRequest
+	deleteRequests     []artifacts.DeleteContainerRepositoryRequest
 }
 
 func (c *MockArtifactsClient) containerRepositorySummary(name string) *artifacts.ContainerRepositorySummary {
@@ -82,6 +83,29 @@ func (c *MockArtifactsClient) ListContainerRepositories(ctx context.Context, req
 	return artifacts.ListContainerRepositoriesResponse{}, nil
 }
 
+func (c *MockArtifactsClient) ListContainerImages(ctx context.Context, request artifacts.ListContainerImagesRequest) (response artifacts.ListContainerImagesResponse, err error) {
+	c.listImagesRequests = append(c.listImagesRequests, request)
+
+	existing := artifacts.ContainerImageSummary{
+		DisplayName:    common.String("existing-image:tag"),
+		Id:             common.String("id-existing-image:tag"),
+		RepositoryName: common.String("existing-image"),
+	}
+
+	if *request.DisplayName == "existing-image:tag" {
+		fmt.Println(request.DisplayName, request)
+		return artifacts.ListContainerImagesResponse{
+			ContainerImageCollection: artifacts.ContainerImageCollection{
+				Items: []artifacts.ContainerImageSummary{
+					existing,
+				},
+			},
+		}, nil
+	}
+
+	return artifacts.ListContainerImagesResponse{}, nil
+}
+
 func (c *MockArtifactsClient) CreateContainerRepository(ctx context.Context, request artifacts.CreateContainerRepositoryRequest) (response artifacts.CreateContainerRepositoryResponse, err error) {
 
 	c.createRequests = append(c.createRequests, request)
@@ -111,10 +135,11 @@ func (c *MockArtifactsClient) DeleteContainerRepository(ctx context.Context, req
 	return artifacts.DeleteContainerRepositoryResponse{}, fmt.Errorf("Image doesn't exist")
 }
 
-func (a *artifactsHandler) assertRequestCounts(t *testing.T, expectedLists int, expectedCreates int, expectedDeletes int) {
+func (a *artifactsHandler) assertRequestCounts(t *testing.T, expectedLists int, expectedCreates int, expectedDeletes int, expectedListImagesRequests int) {
 	nLists := len(a.client.(*MockArtifactsClient).listRequests)
 	nCreates := len(a.client.(*MockArtifactsClient).createRequests)
 	nDeletes := len(a.client.(*MockArtifactsClient).deleteRequests)
+	nListImages := len(a.client.(*MockArtifactsClient).listImagesRequests)
 	if nLists != expectedLists {
 		t.Errorf("Expected %v list request: %v", expectedLists, nLists)
 	}
@@ -123,6 +148,9 @@ func (a *artifactsHandler) assertRequestCounts(t *testing.T, expectedLists int, 
 	}
 	if nDeletes != expectedDeletes {
 		t.Errorf("Expected %v delete request: %v", expectedDeletes, nDeletes)
+	}
+	if nListImages != expectedListImagesRequests {
+		t.Errorf("Expected %v list images request: %v", expectedListImagesRequests, nListImages)
 	}
 }
 
@@ -135,14 +163,16 @@ func TestGetByName(t *testing.T) {
 	}
 
 	{
-		_, _, err := a.getByName("existing-image")
+		req := httptest.NewRequest("GET", "/existing-image", nil)
+		_, _, err := a.getByName(req)
 		if err == nil {
 			t.Errorf("Expected error: %v", err)
 		}
 	}
 
 	{
-		container, name, err := a.getByName("/repo/existing-image")
+		req := httptest.NewRequest("GET", "/repo/existing-image", nil)
+		container, name, err := a.getByName(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -158,7 +188,8 @@ func TestGetByName(t *testing.T) {
 	}
 
 	{
-		container, name, err := a.getByName("/repo/new-image")
+		req := httptest.NewRequest("GET", "/repo/new-image", nil)
+		container, name, err := a.getByName(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -171,7 +202,42 @@ func TestGetByName(t *testing.T) {
 	}
 }
 
-func TestList(t *testing.T) {
+func TestGetImage(t *testing.T) {
+	a := &artifactsHandler{
+		compartmentId: "compartmentId",
+		client:        &MockArtifactsClient{},
+	}
+
+	req := httptest.NewRequest("GET", "/image/existing-image:tag", nil)
+	w := httptest.NewRecorder()
+	a.ServeHTTP(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+	data, err := ioutil.ReadAll(w.Result().Body)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if res.StatusCode != 200 {
+		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
+	}
+
+	a.assertRequestCounts(t, 0, 0, 0, 1)
+
+	fmt.Println(string(data))
+
+	var result map[string]interface{}
+	err2 := json.Unmarshal([]byte(data), &result)
+	if err2 != nil {
+		t.Errorf("Unexpected error: %v", err2)
+	}
+
+	if result["displayName"] != "existing-image:tag" || result["id"] != "id-existing-image:tag" {
+		t.Errorf("Expected 'existing-image': %v", result)
+	}
+}
+
+func TestListRepos(t *testing.T) {
 	a := &artifactsHandler{
 		compartmentId: "compartmentId",
 		client:        &MockArtifactsClient{},
@@ -191,7 +257,7 @@ func TestList(t *testing.T) {
 		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
 	}
 
-	a.assertRequestCounts(t, 1, 0, 0)
+	a.assertRequestCounts(t, 1, 0, 0, 0)
 
 	fmt.Println(string(data))
 
@@ -237,7 +303,7 @@ func TestCreate(t *testing.T) {
 		t.Errorf("Expected DisplayName 'new-image': %v", result["displayName"])
 	}
 
-	a.assertRequestCounts(t, 1, 1, 0)
+	a.assertRequestCounts(t, 0, 1, 0, 0)
 }
 
 func TestDelete(t *testing.T) {
@@ -251,7 +317,7 @@ func TestDelete(t *testing.T) {
 		w := httptest.NewRecorder()
 		a.ServeHTTP(w, req)
 
-		a.assertRequestCounts(t, 1, 0, 0)
+		a.assertRequestCounts(t, 1, 0, 0, 0)
 	}
 
 	{
@@ -259,6 +325,6 @@ func TestDelete(t *testing.T) {
 		w := httptest.NewRecorder()
 		a.ServeHTTP(w, req)
 
-		a.assertRequestCounts(t, 2, 0, 1)
+		a.assertRequestCounts(t, 2, 0, 1, 0)
 	}
 }
