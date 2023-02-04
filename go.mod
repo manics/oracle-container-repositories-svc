@@ -32,4 +32,4 @@ replace github.com/manics/oracle-container-repositories-svc/oracle => ./oracle
 
 replace github.com/manics/oracle-container-repositories-svc/amazon => ./amazon
 
-replace github.com/manics/oracle-container-repositories-svc/utils => ../utils
+replace github.com/manics/oracle-container-repositories-svc/registry => ../registry

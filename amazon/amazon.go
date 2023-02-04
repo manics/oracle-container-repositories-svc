@@ -4,6 +4,7 @@
 package amazon
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,13 +14,12 @@ import (
 	"regexp"
 	"strconv"
 
-	"context"
+	"github.com/manics/oracle-container-repositories-svc/registry"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/manics/oracle-container-repositories-svc/utils"
 )
 
 var (
@@ -60,12 +60,12 @@ func (c *ecrHandler) ListRepositories(w http.ResponseWriter, r *http.Request) {
 	}
 	repos, err := c.client.DescribeRepositories(context.TODO(), &input)
 	if err != nil {
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 	jsonBytes, err := json.Marshal(repos.Repositories)
 	if err != nil {
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -96,7 +96,7 @@ func (c *ecrHandler) getRepoByName(name string) (*types.Repository, error) {
 func (c *ecrHandler) getRepositoryAsJson(r *http.Request) (bool, string, []byte, error) {
 	null := []byte("null")
 
-	name, err := utils.RepoGetName(r)
+	name, err := registry.RepoGetName(r)
 	if err != nil {
 		return false, name, null, err
 	}
@@ -121,7 +121,7 @@ func (c *ecrHandler) GetRepository(w http.ResponseWriter, r *http.Request) {
 	found, name, jsonBytes, err := c.getRepositoryAsJson(r)
 	if err != nil {
 		log.Println("Error:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -136,10 +136,10 @@ func (c *ecrHandler) GetRepository(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
-	repoName, tag, err := utils.ImageGetNameAndTag(r)
+	repoName, tag, err := registry.ImageGetNameAndTag(r)
 	if err != nil {
 		log.Printf("ERROR: %v\n", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 	}
 	fullname := fmt.Sprintf("%s:%s", repoName, tag)
 
@@ -161,7 +161,7 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Println("Error:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -169,7 +169,7 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Image '%s' found: %s\n", fullname, image.ImageTags)
 	jsonBytes, err := json.Marshal(image)
 	if err != nil {
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -240,10 +240,10 @@ func (c *ecrHandler) setRepositoryPolicy(repoName string) error {
 }
 
 func (c *ecrHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
-	name, err := utils.RepoGetName(r)
+	name, err := registry.RepoGetName(r)
 	if err != nil {
 		log.Println("Error:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -265,19 +265,19 @@ func (c *ecrHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
 			found, _, jsonBytes, err := c.getRepositoryAsJson(r)
 			if err != nil {
 				log.Println("Error:", err)
-				utils.InternalServerError(w, r)
+				registry.InternalServerError(w, r)
 				return
 			}
 			if !found {
 				log.Printf("RepositoryAlreadyExistsException but repository not found %s: %v", name, awsErr)
-				utils.InternalServerError(w, r)
+				registry.InternalServerError(w, r)
 				return
 			}
 			log.Println("Repo already exists", name)
 			jsonResponse = jsonBytes
 		} else {
 			log.Println("Error:", err)
-			utils.InternalServerError(w, r)
+			registry.InternalServerError(w, r)
 			return
 		}
 	}
@@ -285,7 +285,7 @@ func (c *ecrHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
 	err = c.setRepositoryPolicy(name)
 	if err != nil {
 		log.Println("ERROR:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -293,7 +293,7 @@ func (c *ecrHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
 		jsonBytes, err := json.Marshal(createResponse.Repository)
 		if err != nil {
 			log.Println("Error:", err)
-			utils.InternalServerError(w, r)
+			registry.InternalServerError(w, r)
 			return
 		}
 		jsonResponse = jsonBytes
@@ -325,10 +325,10 @@ func (c *ecrHandler) deleteRepositoryPolicy(repoName string) error {
 }
 
 func (c *ecrHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
-	name, err := utils.RepoGetName(r)
+	name, err := registry.RepoGetName(r)
 	if err != nil {
 		log.Println("Error:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -337,7 +337,7 @@ func (c *ecrHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
 	err = c.deleteRepositoryPolicy(name)
 	if err != nil {
 		log.Println("Error:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -357,7 +357,7 @@ func (c *ecrHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -368,23 +368,23 @@ func (c *ecrHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	token, err := c.client.GetAuthorizationToken(context.TODO(), &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		log.Println("Error:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 	if len(token.AuthorizationData) != 1 {
 		log.Println("Error: expected 1 token, got", len(token.AuthorizationData))
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
-	resp := &utils.RegistryToken{
+	resp := &registry.RegistryToken{
 		Token:   *token.AuthorizationData[0].AuthorizationToken,
 		Expires: *token.AuthorizationData[0].ExpiresAt,
 	}
 	jsonBytes, err := json.Marshal(resp)
 	if err != nil {
 		log.Println("Error:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -406,7 +406,7 @@ func envvarIntGreaterThanZero(envvar string) (int, error) {
 	return i, nil
 }
 
-func Setup(mux *http.ServeMux, args []string) (utils.IRegistryClient, error) {
+func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) {
 	if len(args) != 0 {
 		return nil, errors.New("no arguments expected")
 	}

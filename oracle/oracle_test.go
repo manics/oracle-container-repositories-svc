@@ -9,7 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/manics/oracle-container-repositories-svc/utils"
+	"github.com/manics/oracle-container-repositories-svc/registry"
+
 	"github.com/oracle/oci-go-sdk/v65/artifacts"
 	"github.com/oracle/oci-go-sdk/v65/common"
 )
@@ -206,7 +207,7 @@ func request(t *testing.T, method string, path string) (MockArtifactsClient, *ht
 		compartmentId: "compartmentId",
 		client:        &art,
 	}
-	s := &utils.RegistryServer{
+	s := &registry.RegistryServer{
 		Client: a,
 	}
 

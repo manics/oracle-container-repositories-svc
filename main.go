@@ -10,7 +10,7 @@ import (
 
 	"github.com/manics/oracle-container-repositories-svc/amazon"
 	"github.com/manics/oracle-container-repositories-svc/oracle"
-	"github.com/manics/oracle-container-repositories-svc/utils"
+	"github.com/manics/oracle-container-repositories-svc/registry"
 )
 
 var (
@@ -28,13 +28,13 @@ func (h *healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonBytes, err := json.Marshal(versionInfo)
 		if err != nil {
-			utils.InternalServerError(w, r)
+			registry.InternalServerError(w, r)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonBytes)
 	} else {
-		utils.NotFound(w, r)
+		registry.NotFound(w, r)
 		return
 	}
 }
@@ -54,7 +54,7 @@ func main() {
 
 	provider := os.Args[1]
 
-	var registryH utils.IRegistryClient
+	var registryH registry.IRegistryClient
 	var err error
 	switch provider {
 	case "amazon":
@@ -67,7 +67,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	utils.CreateServer(mux, registryH, true)
+	registry.CreateServer(mux, registryH, true)
 
 	listen := "0.0.0.0:8080"
 	log.Printf("Listening on %v\n", listen)

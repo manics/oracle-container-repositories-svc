@@ -11,10 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/manics/oracle-container-repositories-svc/registry"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
-	"github.com/manics/oracle-container-repositories-svc/utils"
 )
 
 type MockEcrClient struct {
@@ -206,7 +207,7 @@ func request(t *testing.T, method string, path string) (MockEcrClient, *http.Res
 		registryId: registryId,
 		client:     &ecr,
 	}
-	s := &utils.RegistryServer{
+	s := &registry.RegistryServer{
 		Client: e,
 	}
 

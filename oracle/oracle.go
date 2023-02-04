@@ -4,6 +4,7 @@
 package oracle
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,9 +13,8 @@ import (
 	"os"
 	"regexp"
 
-	"context"
+	"github.com/manics/oracle-container-repositories-svc/registry"
 
-	"github.com/manics/oracle-container-repositories-svc/utils"
 	"github.com/oracle/oci-go-sdk/identity"
 	"github.com/oracle/oci-go-sdk/v65/artifacts"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -48,12 +48,12 @@ func (c *artifactsHandler) ListRepositories(w http.ResponseWriter, r *http.Reque
 		CompartmentId: &c.compartmentId,
 	})
 	if err != nil {
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 	jsonBytes, err := json.Marshal(repos.Items)
 	if err != nil {
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -61,7 +61,7 @@ func (c *artifactsHandler) ListRepositories(w http.ResponseWriter, r *http.Reque
 }
 
 func (c *artifactsHandler) getByName(r *http.Request) (*artifacts.ContainerRepositorySummary, string, error) {
-	name, err := utils.RepoGetName(r)
+	name, err := registry.RepoGetName(r)
 	if err != nil {
 		log.Println(err)
 		return nil, "", err
@@ -88,7 +88,7 @@ func (c *artifactsHandler) GetRepository(w http.ResponseWriter, r *http.Request)
 	repo, name, err := c.getByName(r)
 	if err != nil {
 		log.Println("Error:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -100,7 +100,7 @@ func (c *artifactsHandler) GetRepository(w http.ResponseWriter, r *http.Request)
 	} else {
 		jsonBytes, err := json.Marshal(repo)
 		if err != nil {
-			utils.InternalServerError(w, r)
+			registry.InternalServerError(w, r)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -109,10 +109,10 @@ func (c *artifactsHandler) GetRepository(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
-	repoName, tag, err := utils.ImageGetNameAndTag(r)
+	repoName, tag, err := registry.ImageGetNameAndTag(r)
 	if err != nil {
 		log.Printf("ERROR: %v\n", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 	}
 	fullname := fmt.Sprintf("%s:%s", repoName, tag)
 
@@ -125,7 +125,7 @@ func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Println("ERROR:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 	}
 
 	if len(images.Items) == 0 {
@@ -139,7 +139,7 @@ func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Image '%s' found: %s\n", fullname, *image.Id)
 	jsonBytes, err := json.Marshal(image)
 	if err != nil {
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -147,10 +147,10 @@ func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
-	name, err := utils.RepoGetName(r)
+	name, err := registry.RepoGetName(r)
 	if err != nil {
 		log.Println("ERROR:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -172,20 +172,20 @@ func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Reque
 			repo, name, err := c.getByName(r)
 			if err != nil {
 				log.Println("Error:", err)
-				utils.InternalServerError(w, r)
+				registry.InternalServerError(w, r)
 				return
 			}
 
 			if repo == nil {
 				log.Printf("NAMESPACE_CONFLICT but repository not found %s: %v", name, err)
-				utils.InternalServerError(w, r)
+				registry.InternalServerError(w, r)
 				return
 			}
 
 			jsonBytes, err := json.Marshal(repo)
 			if err != nil {
 				log.Printf("ERROR: %v\n", err)
-				utils.InternalServerError(w, r)
+				registry.InternalServerError(w, r)
 				return
 			}
 
@@ -200,7 +200,7 @@ func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Reque
 	jsonBytes, err := json.Marshal(createResponse.ContainerRepository)
 	if err != nil {
 		log.Printf("ERROR: %v\n", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -211,7 +211,7 @@ func (c *artifactsHandler) DeleteRepository(w http.ResponseWriter, r *http.Reque
 	repo, name, err := c.getByName(r)
 	if err != nil {
 		log.Println("ERROR:", err)
-		utils.InternalServerError(w, r)
+		registry.InternalServerError(w, r)
 		return
 	}
 
@@ -222,7 +222,7 @@ func (c *artifactsHandler) DeleteRepository(w http.ResponseWriter, r *http.Reque
 			RepositoryId: repo.Id,
 		})
 		if err != nil {
-			utils.InternalServerError(w, r)
+			registry.InternalServerError(w, r)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -237,7 +237,7 @@ func (c *artifactsHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func Setup(mux *http.ServeMux, args []string) (utils.IRegistryClient, error) {
+func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) {
 	var cfg common.ConfigurationProvider
 	var err error
 
