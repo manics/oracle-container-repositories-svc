@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strings"
+	"strconv"
 
 	"context"
 
@@ -36,14 +36,20 @@ type IEcrClient interface {
 
 	CreateRepository(ctx context.Context, input *ecr.CreateRepositoryInput, optFns ...func(*ecr.Options)) (response *ecr.CreateRepositoryOutput, err error)
 
+	PutLifecyclePolicy(ctx context.Context, input *ecr.PutLifecyclePolicyInput, optFns ...func(*ecr.Options)) (response *ecr.PutLifecyclePolicyOutput, err error)
+
 	DeleteRepository(ctx context.Context, input *ecr.DeleteRepositoryInput, optFns ...func(*ecr.Options)) (response *ecr.DeleteRepositoryOutput, err error)
+
+	DeleteLifecyclePolicy(ctx context.Context, input *ecr.DeleteLifecyclePolicyInput, optFns ...func(*ecr.Options)) (response *ecr.DeleteLifecyclePolicyOutput, err error)
 
 	GetAuthorizationToken(ctx context.Context, input *ecr.GetAuthorizationTokenInput, optFns ...func(*ecr.Options)) (response *ecr.GetAuthorizationTokenOutput, err error)
 }
 
 type ecrHandler struct {
-	registryId string
-	client     IEcrClient
+	registryId           string
+	expiresAfterPushDays int
+	expiresAfterPullDays int
+	client               IEcrClient
 }
 
 func (h *ecrHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -91,15 +97,6 @@ func (c *ecrHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonBytes)
-}
-
-func (c *ecrHandler) getName(r *http.Request) (string, error) {
-	if !strings.HasPrefix(r.URL.Path, "/repo/") {
-		err := fmt.Sprintf("Invalid path: %s", r.URL.Path)
-		return "", errors.New(err)
-	}
-	name := strings.TrimPrefix(r.URL.Path, "/repo/")
-	return name, nil
 }
 
 func (c *ecrHandler) getRepoByName(name string) (*types.Repository, error) {
@@ -206,6 +203,70 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
+func lifecyclePolicy(priority int, countType string, countNumber int) string {
+
+	policy := map[string]interface{}{
+		"rulePriority": priority,
+		"description":  fmt.Sprintf("Delete images %s %d days", countType, countNumber),
+		"selection": map[string]interface{}{
+			"tagStatus":   "any",
+			"countType":   countType,
+			"countNumber": countNumber,
+			"countUnit":   "days",
+		},
+		"action": map[string]interface{}{
+			"type": "expire",
+		},
+	}
+
+	jsonBytes, err := json.Marshal(policy)
+	if err != nil {
+		panic(err)
+	}
+	return string(jsonBytes)
+}
+
+// Need https://github.com/aws/containers-roadmap/issues/921
+// to add support for `sinceImagePulled` in the lifecycle policy
+func (c *ecrHandler) setRepositoryPolicy(repoName string) error {
+	if c.expiresAfterPushDays == 0 && c.expiresAfterPullDays == 0 {
+		return nil
+	}
+
+	if c.expiresAfterPushDays > 0 && c.expiresAfterPullDays > 0 {
+		return errors.New("only one of expiresAfterPushDays and expiresAfterPullDays can be set")
+	}
+
+	var policy string
+
+	if c.expiresAfterPullDays > 0 {
+		return errors.New("not implemented, need https://github.com/aws/containers-roadmap/issues/921")
+	}
+
+	// https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html
+	if c.expiresAfterPushDays > 0 {
+		policy = fmt.Sprintf(`{"rules": [%s]}`, lifecyclePolicy(1000, "sinceImagePushed", c.expiresAfterPushDays))
+	}
+	input := ecr.PutLifecyclePolicyInput{
+		RepositoryName:      &repoName,
+		LifecyclePolicyText: &policy,
+	}
+	if c.registryId != "" {
+		input.RegistryId = &c.registryId
+	}
+
+	policyResponse, err := c.client.PutLifecyclePolicy(context.TODO(), &input)
+	if err != nil {
+		return err
+	}
+	jsonBytes, err := json.Marshal(policyResponse.LifecyclePolicyText)
+	if err != nil {
+		return err
+	}
+	log.Printf("Policy for repo '%s' set: %s", repoName, jsonBytes)
+	return nil
+}
+
 func (c *ecrHandler) Create(w http.ResponseWriter, r *http.Request) {
 	name, err := utils.RepoGetName(r)
 	if err != nil {
@@ -223,6 +284,7 @@ func (c *ecrHandler) Create(w http.ResponseWriter, r *http.Request) {
 		input.RegistryId = &c.registryId
 	}
 	createResponse, err := c.client.CreateRepository(context.TODO(), &input)
+	var jsonResponse []byte
 
 	if err != nil {
 		// Ignore if it already exists
@@ -234,30 +296,60 @@ func (c *ecrHandler) Create(w http.ResponseWriter, r *http.Request) {
 				utils.InternalServerError(w, r)
 				return
 			}
-			if found {
-				log.Println("Repo already exists", name)
-				w.WriteHeader(http.StatusOK)
-				w.Write(jsonBytes)
+			if !found {
+				log.Printf("RepositoryAlreadyExistsException but repository not found %s: %v", name, awsErr)
+				utils.InternalServerError(w, r)
 				return
 			}
-			log.Printf("RepositoryAlreadyExistsException but repository not found %s: %v", name, awsErr)
+			log.Println("Repo already exists", name)
+			jsonResponse = jsonBytes
+		} else {
+			log.Println("Error:", err)
 			utils.InternalServerError(w, r)
 			return
 		}
+	}
 
-		log.Println("Error:", err)
+	err = c.setRepositoryPolicy(name)
+	if err != nil {
+		log.Println("ERROR:", err)
 		utils.InternalServerError(w, r)
 		return
 	}
 
-	jsonBytes, err := json.Marshal(createResponse.Repository)
-	if err != nil {
-		log.Println("Error:", err)
-		utils.InternalServerError(w, r)
-		return
+	if jsonResponse == nil {
+		jsonBytes, err := json.Marshal(createResponse.Repository)
+		if err != nil {
+			log.Println("Error:", err)
+			utils.InternalServerError(w, r)
+			return
+		}
+		jsonResponse = jsonBytes
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	w.Write(jsonResponse)
+}
+
+func (c *ecrHandler) deleteRepositoryPolicy(repoName string) error {
+	input := ecr.DeleteLifecyclePolicyInput{
+		RepositoryName: &repoName,
+	}
+	if c.registryId != "" {
+		input.RegistryId = &c.registryId
+	}
+	_, err := c.client.DeleteLifecyclePolicy(context.TODO(), &input)
+	if err != nil {
+		// Ignore if it didn't exist
+		var awsErrRepo *types.RepositoryNotFoundException
+		var awsErrPolicy *types.LifecyclePolicyNotFoundException
+		if errors.As(err, &awsErrRepo) || errors.As(err, &awsErrPolicy) {
+			log.Println("Lifecycle policy not found", repoName)
+			return nil
+		}
+		return err
+	}
+	log.Printf("Policy for repo '%s' deleted", repoName)
+	return nil
 }
 
 func (c *ecrHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -269,6 +361,13 @@ func (c *ecrHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Deleting repo", name)
+
+	err = c.deleteRepositoryPolicy(name)
+	if err != nil {
+		log.Println("Error:", err)
+		utils.InternalServerError(w, r)
+		return
+	}
 
 	input := ecr.DeleteRepositoryInput{
 		RepositoryName: &name,
@@ -320,6 +419,21 @@ func (c *ecrHandler) Token(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
+func envvarIntGreaterThanZero(envvar string) (int, error) {
+	s := os.Getenv(envvar)
+	if s == "" {
+		return 0, nil
+	}
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, fmt.Errorf("ERROR: Invalid %s: %v", envvar, err)
+	}
+	if i < 0 {
+		return 0, fmt.Errorf("%s must be >= 0, got %d", envvar, i)
+	}
+	return i, nil
+}
+
 func Setup(mux *http.ServeMux, args []string) error {
 	if len(args) != 0 {
 		return errors.New("no arguments expected")
@@ -348,6 +462,22 @@ func Setup(mux *http.ServeMux, args []string) error {
 		registryId: registryId,
 		client:     ecrClient,
 	}
+
+	expiresAfterPushDays, err := envvarIntGreaterThanZero("AWS_ECR_EXPIRES_AFTER_PUSH_DAYS")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	ecrH.expiresAfterPushDays = expiresAfterPushDays
+
+	// Not yet supported by AWS ECR
+	// expiresAfterPullDays, err := envvarIntGreaterThanZero("AWS_ECR_EXPIRES_AFTER_PULL_DAYS")
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return err
+	// }
+	// ecrH.expiresAfterPullDays = expiresAfterPullDays
+
 	authorizedH := utils.CheckAuthorised(ecrH)
 
 	mux.Handle("/repos", authorizedH)

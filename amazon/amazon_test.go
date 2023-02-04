@@ -104,6 +104,22 @@ func (c *MockEcrClient) CreateRepository(ctx context.Context, input *ecr.CreateR
 	panic("ERROR")
 }
 
+func (c *MockEcrClient) PutLifecyclePolicy(ctx context.Context, input *ecr.PutLifecyclePolicyInput, optFns ...func(*ecr.Options)) (response *ecr.PutLifecyclePolicyOutput, err error) {
+	var result map[string]interface{}
+	err = json.Unmarshal([]byte(*input.LifecyclePolicyText), &result)
+	if err != nil {
+		fmt.Println(*input.LifecyclePolicyText)
+		return nil, fmt.Errorf("Invalid JSON: %v", err)
+	}
+
+	response = &ecr.PutLifecyclePolicyOutput{
+		RegistryId:          aws.String(registryId),
+		RepositoryName:      input.RepositoryName,
+		LifecyclePolicyText: input.LifecyclePolicyText,
+	}
+	return response, nil
+}
+
 func (c *MockEcrClient) DeleteRepository(ctx context.Context, input *ecr.DeleteRepositoryInput, optFns ...func(*ecr.Options)) (response *ecr.DeleteRepositoryOutput, err error) {
 	c.deleteRepoRequests = append(c.deleteRepoRequests, *input)
 
@@ -114,6 +130,15 @@ func (c *MockEcrClient) DeleteRepository(ctx context.Context, input *ecr.DeleteR
 	c.deleteRepoNoops++
 	return nil, &types.RepositoryNotFoundException{Message: aws.String("Repository not found")}
 }
+
+func (c *MockEcrClient) DeleteLifecyclePolicy(ctx context.Context, input *ecr.DeleteLifecyclePolicyInput, optFns ...func(*ecr.Options)) (response *ecr.DeleteLifecyclePolicyOutput, err error) {
+	response = &ecr.DeleteLifecyclePolicyOutput{
+		RegistryId:     aws.String(registryId),
+		RepositoryName: input.RepositoryName,
+	}
+	return response, nil
+}
+
 func (c *MockEcrClient) GetAuthorizationToken(ctx context.Context, input *ecr.GetAuthorizationTokenInput, optFns ...func(*ecr.Options)) (response *ecr.GetAuthorizationTokenOutput, err error) {
 	c.getTokenRequests = append(c.getTokenRequests, *input)
 
