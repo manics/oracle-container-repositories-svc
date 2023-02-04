@@ -14,12 +14,15 @@ import (
 )
 
 var (
+	// Version is set at build time using the Git repository metadata
 	Version string
 )
 
+// healthHandler is a http.handler that returns the version
 type healthHandler struct {
 }
 
+// ServeHTTP implements http.Handler
 func (h *healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 	if r.Method == http.MethodGet && r.URL.Path == "/health" {
@@ -39,6 +42,7 @@ func (h *healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// The main entrypoint for the service
 func main() {
 	_, found := os.LookupEnv("AUTH_TOKEN")
 	if !found {
