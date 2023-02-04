@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -21,13 +20,8 @@ type RegistryToken struct {
 
 // CheckAuthorised wraps originalHandler to check for a valid Authorization header
 // and returns a http.Handler
-func CheckAuthorised(originalHandler http.Handler) http.Handler {
+func CheckAuthorised(originalHandler http.Handler, authToken string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authToken, found := os.LookupEnv("AUTH_TOKEN")
-		if !found {
-			log.Fatalln("AUTH_TOKEN not found, set it to a secret token or '' to disable authentication")
-		}
-
 		authorised := false
 		if authToken == "" {
 			authorised = true
@@ -160,16 +154,11 @@ func (h *RegistryServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateServer configures a new http handler for the registry helper
-func CreateServer(mux *http.ServeMux, registryH IRegistryClient, auth bool) {
+func CreateServer(mux *http.ServeMux, registryH IRegistryClient, authToken string) {
 	serverH := &RegistryServer{
 		Client: registryH,
 	}
-	var h http.Handler
-	if auth {
-		h = CheckAuthorised(serverH)
-	} else {
-		h = serverH
-	}
+	h := CheckAuthorised(serverH, authToken)
 
 	mux.Handle("/repos", h)
 	mux.Handle("/repo/", h)

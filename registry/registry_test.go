@@ -18,28 +18,23 @@ func (h *mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func TestCheckAuthorised(t *testing.T) {
 	testCases := []struct {
-		authTokenEnvVar interface{}
-		authToken       interface{}
-		expectedStatus  interface{}
+		authToken      string
+		clientToken    interface{}
+		expectedStatus int
 	}{
 		{"", "ignored", 200},
 		{"token", "token", 200},
 		{"token", "incorrect", 403},
 		{"token", "", 403},
 		{"token", nil, 403},
-		// TODO: Test unset AUTH_TOKEN (should fail and exit)
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%v,%v,%v", tc.authTokenEnvVar, tc.authToken, tc.expectedStatus), func(t *testing.T) {
-			if tc.authTokenEnvVar != nil {
-				t.Setenv("AUTH_TOKEN", tc.authTokenEnvVar.(string))
-			}
-
-			a := CheckAuthorised(&mockHandler{})
+		t.Run(fmt.Sprintf("%v,%v,%v", tc.authToken, tc.clientToken, tc.expectedStatus), func(t *testing.T) {
+			a := CheckAuthorised(&mockHandler{}, tc.authToken)
 			req := httptest.NewRequest("GET", "/", nil)
-			if tc.authToken != nil {
-				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tc.authToken))
+			if tc.clientToken != nil {
+				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tc.clientToken))
 			}
 
 			w := httptest.NewRecorder()

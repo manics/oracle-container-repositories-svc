@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -42,11 +43,19 @@ func (h *healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getAuthToken() (string, error) {
+	authToken, found := os.LookupEnv("AUTH_TOKEN")
+	if !found {
+		return "", errors.New("AUTH_TOKEN not found, set it to a secret token or '' to disable authentication")
+	}
+	return authToken, nil
+}
+
 // The main entrypoint for the service
 func main() {
-	_, found := os.LookupEnv("AUTH_TOKEN")
-	if !found {
-		log.Fatalln("AUTH_TOKEN not found, set it to a secret token or '' to disable authentication")
+	authToken, err := getAuthToken()
+	if err != nil {
+		log.Fatalln(err)
 	}
 
 	if len(os.Args) < 2 {
@@ -59,7 +68,6 @@ func main() {
 	provider := os.Args[1]
 
 	var registryH registry.IRegistryClient
-	var err error
 	switch provider {
 	case "amazon":
 		registryH, err = amazon.Setup(mux, os.Args[2:])
@@ -71,7 +79,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	registry.CreateServer(mux, registryH, true)
+	registry.CreateServer(mux, registryH, authToken)
 
 	listen := "0.0.0.0:8080"
 	log.Printf("Listening on %v\n", listen)
