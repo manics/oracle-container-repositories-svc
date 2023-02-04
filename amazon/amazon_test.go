@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
@@ -14,14 +14,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
+	"github.com/manics/oracle-container-repositories-svc/utils"
 )
 
 type MockEcrClient struct {
-	describeRepoRequests  []ecr.DescribeRepositoriesInput
-	describeImageRequests []ecr.DescribeImagesInput
-	createRepoRequests    []ecr.CreateRepositoryInput
-	deleteRepoRequests    []ecr.DeleteRepositoryInput
-	getTokenRequests      []ecr.GetAuthorizationTokenInput
+	describeRepoRequests    []ecr.DescribeRepositoriesInput
+	describeImageRequests   []ecr.DescribeImagesInput
+	createRepoRequests      []ecr.CreateRepositoryInput
+	putLifecycleRequests    []ecr.PutLifecyclePolicyInput
+	deleteRepoRequests      []ecr.DeleteRepositoryInput
+	deleteLifecycleRequests []ecr.DeleteLifecyclePolicyInput
+	getTokenRequests        []ecr.GetAuthorizationTokenInput
 
 	createRepoNoops int
 	deleteRepoNoops int
@@ -105,6 +108,8 @@ func (c *MockEcrClient) CreateRepository(ctx context.Context, input *ecr.CreateR
 }
 
 func (c *MockEcrClient) PutLifecyclePolicy(ctx context.Context, input *ecr.PutLifecyclePolicyInput, optFns ...func(*ecr.Options)) (response *ecr.PutLifecyclePolicyOutput, err error) {
+	c.putLifecycleRequests = append(c.putLifecycleRequests, *input)
+
 	var result map[string]interface{}
 	err = json.Unmarshal([]byte(*input.LifecyclePolicyText), &result)
 	if err != nil {
@@ -132,6 +137,8 @@ func (c *MockEcrClient) DeleteRepository(ctx context.Context, input *ecr.DeleteR
 }
 
 func (c *MockEcrClient) DeleteLifecyclePolicy(ctx context.Context, input *ecr.DeleteLifecyclePolicyInput, optFns ...func(*ecr.Options)) (response *ecr.DeleteLifecyclePolicyOutput, err error) {
+	c.deleteLifecycleRequests = append(c.deleteLifecycleRequests, *input)
+
 	response = &ecr.DeleteLifecyclePolicyOutput{
 		RegistryId:     aws.String(registryId),
 		RepositoryName: input.RepositoryName,
@@ -152,54 +159,70 @@ func (c *MockEcrClient) GetAuthorizationToken(ctx context.Context, input *ecr.Ge
 	}, nil
 }
 
-func (e *ecrHandler) assertRequestCounts(t *testing.T, expectedDescribeRepos int, expectedCreates int, expectedDeletes int, expectedDescribeImages int, expectedTokens int) {
-	nDescribeRepos := len(e.client.(*MockEcrClient).describeRepoRequests)
-	nCreateRepos := len(e.client.(*MockEcrClient).createRepoRequests)
-	nDeleteRepos := len(e.client.(*MockEcrClient).deleteRepoRequests)
-	nDescribeImages := len(e.client.(*MockEcrClient).describeImageRequests)
-	nGetTokens := len(e.client.(*MockEcrClient).getTokenRequests)
-	if nDescribeRepos != expectedDescribeRepos {
-		t.Errorf("Expected %v describe repo request: %v", expectedDescribeRepos, nDescribeRepos)
+func (e *MockEcrClient) assertCounts(t *testing.T, expected map[string]int) {
+	countRequests := map[string]int{
+		"describeRepos":    len(e.describeRepoRequests),
+		"createRepos":      len(e.createRepoRequests),
+		"putLifecycles":    len(e.putLifecycleRequests),
+		"deleteRepos":      len(e.deleteRepoRequests),
+		"deleteLifecycles": len(e.deleteLifecycleRequests),
+		"describeImages":   len(e.describeImageRequests),
+		"getTokens":        len(e.getTokenRequests),
 	}
-	if nCreateRepos != expectedCreates {
-		t.Errorf("Expected %v create request: %v", expectedCreates, nCreateRepos)
+	for k, v := range countRequests {
+		e := 0
+		if val, ok := expected[k]; ok {
+			e = val
+			delete(expected, k)
+		}
+		if v != e {
+			t.Errorf("Expected %d %s requests: %d", e, k, v)
+		}
 	}
-	if nDeleteRepos != expectedDeletes {
-		t.Errorf("Expected %v delete request: %v", expectedDeletes, nDeleteRepos)
+
+	countNoops := map[string]int{
+		"createNoops": e.createRepoNoops,
+		"deleteNoops": e.deleteRepoNoops,
 	}
-	if nDescribeImages != expectedDescribeImages {
-		t.Errorf("Expected %v describe image request: %v", expectedDescribeImages, nDescribeImages)
+	for k, v := range countNoops {
+		e := 0
+		if val, ok := expected[k]; ok {
+			e = val
+			delete(expected, k)
+		}
+		if v != e {
+			t.Errorf("Expected %d %s: %d", e, k, v)
+		}
 	}
-	if nGetTokens != expectedTokens {
-		t.Errorf("Expected %v get token request: %v", expectedTokens, nGetTokens)
+
+	if len(expected) > 0 {
+		t.Errorf("Invalid expected counts: %v", expected)
 	}
 }
 
-func (e *ecrHandler) assertNoopCounts(t *testing.T, expectedCreateNoops int, expectedDeleteNoops int) {
-	nCreateNoops := e.client.(*MockEcrClient).createRepoNoops
-	nDeleteNoops := e.client.(*MockEcrClient).deleteRepoNoops
-	if nCreateNoops != expectedCreateNoops {
-		t.Errorf("Expected %v create noops: %v", expectedCreateNoops, nCreateNoops)
+func request(t *testing.T, method string, path string) (MockEcrClient, *http.Response, []byte, error) {
+	ecr := MockEcrClient{}
+	e := &ecrHandler{
+		registryId: registryId,
+		client:     &ecr,
 	}
-	if nDeleteNoops != expectedDeleteNoops {
-		t.Errorf("Expected %v delete noops: %v", expectedDeleteNoops, nDeleteNoops)
+	s := &utils.RegistryServer{
+		Client: e,
 	}
+
+	req := httptest.NewRequest(method, path, nil)
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+	data, err := ioutil.ReadAll(w.Result().Body)
+	return ecr, res, data, err
 }
 
 // Tests
 
 func TestList(t *testing.T) {
-	e := &ecrHandler{
-		registryId: registryId,
-		client:     &MockEcrClient{},
-	}
-
-	req := httptest.NewRequest("GET", "/repos", nil)
-	w := httptest.NewRecorder()
-	e.ServeHTTP(w, req)
-	res := w.Result()
-	defer res.Body.Close()
-	data, err := ioutil.ReadAll(w.Result().Body)
+	ecr, res, data, err := request(t, "GET", "/repos")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -208,7 +231,9 @@ func TestList(t *testing.T) {
 		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
 	}
 
-	e.assertRequestCounts(t, 1, 0, 0, 0, 0)
+	ecr.assertCounts(t, map[string]int{
+		"describeRepos": 1,
+	})
 
 	fmt.Println(string(data))
 
@@ -317,18 +342,7 @@ func TestGetRepo(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.imageName, tc.expectedStatusCode), func(t *testing.T) {
-
-			e := &ecrHandler{
-				registryId: registryId,
-				client:     &MockEcrClient{},
-			}
-
-			req := httptest.NewRequest("GET", "/repo/"+tc.imageName, nil)
-			w := httptest.NewRecorder()
-			e.ServeHTTP(w, req)
-			res := w.Result()
-			defer res.Body.Close()
-			data, err := ioutil.ReadAll(w.Result().Body)
+			ecr, res, data, err := request(t, "GET", "/repo/"+tc.imageName)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -337,7 +351,9 @@ func TestGetRepo(t *testing.T) {
 				t.Errorf("Expected StatusCode %v: %v", tc.expectedStatusCode, res.StatusCode)
 			}
 
-			e.assertRequestCounts(t, 1, 0, 0, 0, 0)
+			ecr.assertCounts(t, map[string]int{
+				"describeRepos": 1,
+			})
 
 			if tc.expectedStatusCode == 200 {
 				var result map[string]interface{}
@@ -372,19 +388,7 @@ func TestGetImage(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.tag, tc.expectedStatusCode), func(t *testing.T) {
 
-			e := &ecrHandler{
-				registryId: registryId,
-				client:     &MockEcrClient{},
-			}
-
-			req := httptest.NewRequest("GET", fmt.Sprintf("/image/%s:%s", tc.imageName, tc.tag), nil)
-			w := httptest.NewRecorder()
-			log.Println("Calling ServeHTTP")
-			e.ServeHTTP(w, req)
-			log.Println("Called ServeHTTP")
-			res := w.Result()
-			defer res.Body.Close()
-			data, err := ioutil.ReadAll(w.Result().Body)
+			ecr, res, data, err := request(t, "GET", fmt.Sprintf("/image/%s:%s", tc.imageName, tc.tag))
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -393,7 +397,9 @@ func TestGetImage(t *testing.T) {
 				t.Errorf("Expected StatusCode %v: %v", tc.expectedStatusCode, res.StatusCode)
 			}
 
-			e.assertRequestCounts(t, 0, 0, 0, 1, 0)
+			ecr.assertCounts(t, map[string]int{
+				"describeImages": 1,
+			})
 
 			if tc.expectedStatusCode == 200 {
 				var result map[string]interface{}
@@ -425,18 +431,7 @@ func TestCreate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.imageName, tc.create), func(t *testing.T) {
-
-			e := &ecrHandler{
-				registryId: registryId,
-				client:     &MockEcrClient{},
-			}
-
-			req := httptest.NewRequest("POST", "/repo/"+tc.imageName, nil)
-			w := httptest.NewRecorder()
-			e.ServeHTTP(w, req)
-			res := w.Result()
-			defer res.Body.Close()
-			data, err := ioutil.ReadAll(w.Result().Body)
+			ecr, res, data, err := request(t, "POST", "/repo/"+tc.imageName)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -446,11 +441,15 @@ func TestCreate(t *testing.T) {
 			}
 
 			if tc.create {
-				e.assertRequestCounts(t, 0, 1, 0, 0, 0)
-				e.assertNoopCounts(t, 0, 0)
+				ecr.assertCounts(t, map[string]int{
+					"createRepos": 1,
+				})
 			} else {
-				e.assertRequestCounts(t, 1, 1, 0, 0, 0)
-				e.assertNoopCounts(t, 1, 0)
+				ecr.assertCounts(t, map[string]int{
+					"describeRepos": 1,
+					"createRepos":   1,
+					"createNoops":   1,
+				})
 			}
 
 			var result map[string]interface{}
@@ -477,18 +476,7 @@ func TestDelete(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.imageName, tc.delete), func(t *testing.T) {
-
-			e := &ecrHandler{
-				registryId: registryId,
-				client:     &MockEcrClient{},
-			}
-
-			req := httptest.NewRequest("DELETE", "/repo/"+tc.imageName, nil)
-			w := httptest.NewRecorder()
-			e.ServeHTTP(w, req)
-			res := w.Result()
-			defer res.Body.Close()
-			_, err := ioutil.ReadAll(w.Result().Body)
+			ecr, res, _, err := request(t, "DELETE", "/repo/"+tc.imageName)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -498,28 +486,24 @@ func TestDelete(t *testing.T) {
 			}
 
 			if tc.delete {
-				e.assertRequestCounts(t, 0, 0, 1, 0, 0)
-				e.assertNoopCounts(t, 0, 0)
+				ecr.assertCounts(t, map[string]int{
+					"deleteRepos":      1,
+					"deleteLifecycles": 1,
+				})
 			} else {
-				e.assertRequestCounts(t, 0, 0, 1, 0, 0)
-				e.assertNoopCounts(t, 0, 1)
+				ecr.assertCounts(t, map[string]int{
+					"deleteRepos":      1,
+					"deleteNoops":      1,
+					"deleteLifecycles": 1,
+				})
+
 			}
 		})
 	}
 }
 
 func TestToken(t *testing.T) {
-	e := &ecrHandler{
-		registryId: registryId,
-		client:     &MockEcrClient{},
-	}
-
-	req := httptest.NewRequest("POST", "/token", nil)
-	w := httptest.NewRecorder()
-	e.ServeHTTP(w, req)
-	res := w.Result()
-	defer res.Body.Close()
-	data, err := ioutil.ReadAll(w.Result().Body)
+	ecr, res, data, err := request(t, "POST", "/token")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -527,6 +511,10 @@ func TestToken(t *testing.T) {
 	if res.StatusCode != 200 {
 		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
 	}
+
+	ecr.assertCounts(t, map[string]int{
+		"getTokens": 1,
+	})
 
 	var result map[string]interface{}
 	err2 := json.Unmarshal([]byte(data), &result)

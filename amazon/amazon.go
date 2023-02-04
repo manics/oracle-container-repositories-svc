@@ -52,34 +52,7 @@ type ecrHandler struct {
 	client               IEcrClient
 }
 
-func (h *ecrHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", "application/json")
-	switch {
-	case r.Method == http.MethodGet && listReposRe.MatchString(r.URL.Path):
-		h.List(w, r)
-		return
-	case r.Method == http.MethodGet && repoRe.MatchString(r.URL.Path):
-		h.GetRepo(w, r)
-		return
-	case r.Method == http.MethodGet && imageRe.MatchString(r.URL.Path):
-		h.GetImage(w, r)
-		return
-	case r.Method == http.MethodPost && repoRe.MatchString(r.URL.Path):
-		h.Create(w, r)
-		return
-	case r.Method == http.MethodDelete && repoRe.MatchString(r.URL.Path):
-		h.Delete(w, r)
-		return
-	case r.Method == http.MethodPost && tokenRe.MatchString(r.URL.Path):
-		h.Token(w, r)
-		return
-	default:
-		utils.NotFound(w, r)
-		return
-	}
-}
-
-func (c *ecrHandler) List(w http.ResponseWriter, r *http.Request) {
+func (c *ecrHandler) ListRepositories(w http.ResponseWriter, r *http.Request) {
 	log.Println("Listing repos")
 	input := ecr.DescribeRepositoriesInput{}
 	if c.registryId != "" {
@@ -144,7 +117,7 @@ func (c *ecrHandler) getRepositoryAsJson(r *http.Request) (bool, string, []byte,
 	return true, name, jsonBytes, nil
 }
 
-func (c *ecrHandler) GetRepo(w http.ResponseWriter, r *http.Request) {
+func (c *ecrHandler) GetRepository(w http.ResponseWriter, r *http.Request) {
 	found, name, jsonBytes, err := c.getRepositoryAsJson(r)
 	if err != nil {
 		log.Println("Error:", err)
@@ -204,7 +177,6 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func lifecyclePolicy(priority int, countType string, countNumber int) string {
-
 	policy := map[string]interface{}{
 		"rulePriority": priority,
 		"description":  fmt.Sprintf("Delete images %s %d days", countType, countNumber),
@@ -267,7 +239,7 @@ func (c *ecrHandler) setRepositoryPolicy(repoName string) error {
 	return nil
 }
 
-func (c *ecrHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (c *ecrHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
 	name, err := utils.RepoGetName(r)
 	if err != nil {
 		log.Println("Error:", err)
@@ -352,7 +324,7 @@ func (c *ecrHandler) deleteRepositoryPolicy(repoName string) error {
 	return nil
 }
 
-func (c *ecrHandler) Delete(w http.ResponseWriter, r *http.Request) {
+func (c *ecrHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
 	name, err := utils.RepoGetName(r)
 	if err != nil {
 		log.Println("Error:", err)
@@ -392,7 +364,7 @@ func (c *ecrHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (c *ecrHandler) Token(w http.ResponseWriter, r *http.Request) {
+func (c *ecrHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	token, err := c.client.GetAuthorizationToken(context.TODO(), &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		log.Println("Error:", err)
@@ -434,22 +406,22 @@ func envvarIntGreaterThanZero(envvar string) (int, error) {
 	return i, nil
 }
 
-func Setup(mux *http.ServeMux, args []string) error {
+func Setup(mux *http.ServeMux, args []string) (utils.IRegistryClient, error) {
 	if len(args) != 0 {
-		return errors.New("no arguments expected")
+		return nil, errors.New("no arguments expected")
 	}
 	// Automatically looks for a usable configuration
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Printf("failed to load configuration, %v", err)
-		return err
+		return nil, err
 	}
 
 	stsClient := sts.NewFromConfig(cfg)
 	identity, err := stsClient.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		log.Printf("failed to get identity, %v", err)
-		return err
+		return nil, err
 	}
 	log.Printf("Identity: %v", *identity.Arn)
 
@@ -465,24 +437,16 @@ func Setup(mux *http.ServeMux, args []string) error {
 
 	expiresAfterPushDays, err := envvarIntGreaterThanZero("AWS_ECR_EXPIRES_AFTER_PUSH_DAYS")
 	if err != nil {
-		log.Println(err)
-		return err
+		return nil, err
 	}
 	ecrH.expiresAfterPushDays = expiresAfterPushDays
 
 	// Not yet supported by AWS ECR
 	// expiresAfterPullDays, err := envvarIntGreaterThanZero("AWS_ECR_EXPIRES_AFTER_PULL_DAYS")
 	// if err != nil {
-	// 	log.Println(err)
-	// 	return err
+	// 	return nil, err
 	// }
 	// ecrH.expiresAfterPullDays = expiresAfterPullDays
 
-	authorizedH := utils.CheckAuthorised(ecrH)
-
-	mux.Handle("/repos", authorizedH)
-	mux.Handle("/repo/", authorizedH)
-	mux.Handle("/image/", authorizedH)
-	mux.Handle("/token", authorizedH)
-	return nil
+	return ecrH, nil
 }

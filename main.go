@@ -56,7 +56,12 @@ func main() {
 	var err error
 	switch provider {
 	case "amazon":
-		err = amazon.Setup(mux, os.Args[2:])
+		registryH, err := amazon.Setup(mux, os.Args[2:])
+		if err != nil {
+			log.Fatalln(err)
+		}
+		utils.CreateServer(mux, registryH, true)
+
 	case "oracle":
 		err = oracle.Setup(mux, os.Args[2:])
 	default:
