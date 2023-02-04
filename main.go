@@ -53,23 +53,21 @@ func main() {
 	mux.Handle("/health", &healthHandler{})
 
 	provider := os.Args[1]
+
+	var registryH utils.IRegistryClient
 	var err error
 	switch provider {
 	case "amazon":
-		registryH, err := amazon.Setup(mux, os.Args[2:])
-		if err != nil {
-			log.Fatalln(err)
-		}
-		utils.CreateServer(mux, registryH, true)
-
+		registryH, err = amazon.Setup(mux, os.Args[2:])
 	case "oracle":
-		err = oracle.Setup(mux, os.Args[2:])
+		registryH, err = oracle.Setup(mux, os.Args[2:])
 	default:
 		log.Fatalf("Unknown provider: %s\n", provider)
 	}
 	if err != nil {
 		log.Fatalln(err)
 	}
+	utils.CreateServer(mux, registryH, true)
 
 	listen := "0.0.0.0:8080"
 	log.Printf("Listening on %v\n", listen)

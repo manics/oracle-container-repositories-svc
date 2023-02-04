@@ -42,31 +42,7 @@ type artifactsHandler struct {
 	client        IArtifactsClient
 }
 
-func (h *artifactsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", "application/json")
-	switch {
-	case r.Method == http.MethodGet && listReposRe.MatchString(r.URL.Path):
-		h.List(w, r)
-		return
-	case r.Method == http.MethodGet && repoRe.MatchString(r.URL.Path):
-		h.GetRepo(w, r)
-		return
-	case r.Method == http.MethodGet && imageRe.MatchString(r.URL.Path):
-		h.GetImage(w, r)
-		return
-	case r.Method == http.MethodPost && repoRe.MatchString(r.URL.Path):
-		h.Create(w, r)
-		return
-	case r.Method == http.MethodDelete && repoRe.MatchString(r.URL.Path):
-		h.Delete(w, r)
-		return
-	default:
-		utils.NotFound(w, r)
-		return
-	}
-}
-
-func (c *artifactsHandler) List(w http.ResponseWriter, r *http.Request) {
+func (c *artifactsHandler) ListRepositories(w http.ResponseWriter, r *http.Request) {
 	log.Println("Listing repos")
 	repos, err := c.client.ListContainerRepositories(context.Background(), artifacts.ListContainerRepositoriesRequest{
 		CompartmentId: &c.compartmentId,
@@ -108,7 +84,7 @@ func (c *artifactsHandler) getByName(r *http.Request) (*artifacts.ContainerRepos
 	}
 }
 
-func (c *artifactsHandler) GetRepo(w http.ResponseWriter, r *http.Request) {
+func (c *artifactsHandler) GetRepository(w http.ResponseWriter, r *http.Request) {
 	repo, name, err := c.getByName(r)
 	if err != nil {
 		log.Println("Error:", err)
@@ -170,7 +146,7 @@ func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
-func (c *artifactsHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
 	name, err := utils.RepoGetName(r)
 	if err != nil {
 		log.Println("ERROR:", err)
@@ -231,7 +207,7 @@ func (c *artifactsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
-func (c *artifactsHandler) Delete(w http.ResponseWriter, r *http.Request) {
+func (c *artifactsHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
 	repo, name, err := c.getByName(r)
 	if err != nil {
 		log.Println("ERROR:", err)
@@ -254,7 +230,14 @@ func (c *artifactsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Setup(mux *http.ServeMux, args []string) error {
+func (c *artifactsHandler) GetToken(w http.ResponseWriter, r *http.Request) {
+	log.Println("GetToken not implemented")
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte("not implemented\n"))
+	return
+}
+
+func Setup(mux *http.ServeMux, args []string) (utils.IRegistryClient, error) {
 	var cfg common.ConfigurationProvider
 	var err error
 
@@ -264,7 +247,7 @@ func Setup(mux *http.ServeMux, args []string) error {
 		cfg, err = auth.InstancePrincipalConfigurationProvider()
 		if err != nil {
 			log.Printf("failed to load configuration, %v", err)
-			return err
+			return nil, err
 		}
 	} else if len(args) == 1 {
 		// User principals, using configuration file
@@ -272,33 +255,33 @@ func Setup(mux *http.ServeMux, args []string) error {
 		cfg, err = common.ConfigurationProviderFromFile(cfg_file, "")
 		if err != nil {
 			log.Printf("failed to load configuration, %v", err)
-			return err
+			return nil, err
 		}
 	} else {
-		return errors.New("arguments: [oci-config-file]")
+		return nil, errors.New("arguments: [oci-config-file]")
 	}
 
 	// The OCID of the tenancy containing the compartment.
 	tenancyID, err := cfg.TenancyOCID()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	identityClient, err := identity.NewIdentityClientWithConfigurationProvider(cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	comp, err := identityClient.GetCompartment(context.Background(), identity.GetCompartmentRequest{
 		CompartmentId: &tenancyID,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	log.Printf("Compartment: %v\n", comp.Compartment)
 
 	artifactsClient, err := artifacts.NewArtifactsClientWithConfigurationProvider(cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	compartmentId := os.Getenv("OCI_COMPARTMENT_ID")
@@ -311,10 +294,6 @@ func Setup(mux *http.ServeMux, args []string) error {
 		compartmentId: compartmentId,
 		client:        &artifactsClient,
 	}
-	authorizedH := utils.CheckAuthorised(artifactsH)
 
-	mux.Handle("/repos", authorizedH)
-	mux.Handle("/repo/", authorizedH)
-	mux.Handle("/image/", authorizedH)
-	return nil
+	return artifactsH, nil
 }

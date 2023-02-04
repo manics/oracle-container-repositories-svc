@@ -5,20 +5,49 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/manics/oracle-container-repositories-svc/utils"
 	"github.com/oracle/oci-go-sdk/v65/artifacts"
 	"github.com/oracle/oci-go-sdk/v65/common"
 )
 
 // Helpers
 
+type MockServiceError struct {
+	code string
+}
+
+func (e MockServiceError) GetHTTPStatusCode() int {
+	panic("Not implemented")
+}
+
+func (e MockServiceError) GetMessage() string {
+	panic("Not implemented")
+}
+
+func (e MockServiceError) GetCode() string {
+	return e.code
+}
+
+func (e MockServiceError) GetOpcRequestID() string {
+	panic("Not implemented")
+}
+
+func (e MockServiceError) Error() string {
+	return e.code
+}
+
 type MockArtifactsClient struct {
 	listRequests       []artifacts.ListContainerRepositoriesRequest
 	listImagesRequests []artifacts.ListContainerImagesRequest
 	createRequests     []artifacts.CreateContainerRepositoryRequest
 	deleteRequests     []artifacts.DeleteContainerRepositoryRequest
+
+	createRepoNoops int
+	deleteRepoNoops int
 }
 
 func (c *MockArtifactsClient) containerRepositorySummary(name string) *artifacts.ContainerRepositorySummary {
@@ -116,13 +145,11 @@ func (c *MockArtifactsClient) CreateContainerRepository(ctx context.Context, req
 		}, nil
 	}
 
-	// TODO: return error already exists
-	// if *request.DisplayName == "existing-image" {
-	// 	return artifacts.CreateContainerRepositoryResponse{
-	// 		ContainerRepository: *r,
-	// 	}, nil
-	// }
-	// return artifacts.CreateContainerRepositoryResponse{}, fmt.Errorf("ERROR")
+	if *request.DisplayName == "existing-image" {
+		c.createRepoNoops++
+		return artifacts.CreateContainerRepositoryResponse{}, MockServiceError{code: "NAMESPACE_CONFLICT"}
+	}
+
 	panic("ERROR")
 }
 
@@ -135,23 +162,61 @@ func (c *MockArtifactsClient) DeleteContainerRepository(ctx context.Context, req
 	return artifacts.DeleteContainerRepositoryResponse{}, fmt.Errorf("Image doesn't exist")
 }
 
-func (a *artifactsHandler) assertRequestCounts(t *testing.T, expectedLists int, expectedCreates int, expectedDeletes int, expectedListImagesRequests int) {
-	nLists := len(a.client.(*MockArtifactsClient).listRequests)
-	nCreates := len(a.client.(*MockArtifactsClient).createRequests)
-	nDeletes := len(a.client.(*MockArtifactsClient).deleteRequests)
-	nListImages := len(a.client.(*MockArtifactsClient).listImagesRequests)
-	if nLists != expectedLists {
-		t.Errorf("Expected %v list request: %v", expectedLists, nLists)
+func (e *MockArtifactsClient) assertCounts(t *testing.T, expected map[string]int) {
+	countRequests := map[string]int{
+		"listRepos":   len(e.listRequests),
+		"createRepos": len(e.createRequests),
+		"deleteRepos": len(e.deleteRequests),
+		"listImages":  len(e.listImagesRequests),
 	}
-	if nCreates != expectedCreates {
-		t.Errorf("Expected %v create request: %v", expectedCreates, nCreates)
+	for k, v := range countRequests {
+		e := 0
+		if val, ok := expected[k]; ok {
+			e = val
+			delete(expected, k)
+		}
+		if v != e {
+			t.Errorf("Expected %d %s requests: %d", e, k, v)
+		}
 	}
-	if nDeletes != expectedDeletes {
-		t.Errorf("Expected %v delete request: %v", expectedDeletes, nDeletes)
+
+	countNoops := map[string]int{
+		"createNoops": e.createRepoNoops,
+		"deleteNoops": e.deleteRepoNoops,
 	}
-	if nListImages != expectedListImagesRequests {
-		t.Errorf("Expected %v list images request: %v", expectedListImagesRequests, nListImages)
+	for k, v := range countNoops {
+		e := 0
+		if val, ok := expected[k]; ok {
+			e = val
+			delete(expected, k)
+		}
+		if v != e {
+			t.Errorf("Expected %d %s: %d", e, k, v)
+		}
 	}
+
+	if len(expected) > 0 {
+		t.Errorf("Invalid expected counts: %v", expected)
+	}
+}
+
+func request(t *testing.T, method string, path string) (MockArtifactsClient, *http.Response, []byte, error) {
+	art := MockArtifactsClient{}
+	a := &artifactsHandler{
+		compartmentId: "compartmentId",
+		client:        &art,
+	}
+	s := &utils.RegistryServer{
+		Client: a,
+	}
+
+	req := httptest.NewRequest(method, path, nil)
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+	data, err := ioutil.ReadAll(w.Result().Body)
+	return art, res, data, err
 }
 
 // Tests
@@ -203,17 +268,7 @@ func TestGetByName(t *testing.T) {
 }
 
 func TestGetImage(t *testing.T) {
-	a := &artifactsHandler{
-		compartmentId: "compartmentId",
-		client:        &MockArtifactsClient{},
-	}
-
-	req := httptest.NewRequest("GET", "/image/existing-image:tag", nil)
-	w := httptest.NewRecorder()
-	a.ServeHTTP(w, req)
-	res := w.Result()
-	defer res.Body.Close()
-	data, err := ioutil.ReadAll(w.Result().Body)
+	art, res, data, err := request(t, "GET", "/image/existing-image:tag")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -222,7 +277,9 @@ func TestGetImage(t *testing.T) {
 		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
 	}
 
-	a.assertRequestCounts(t, 0, 0, 0, 1)
+	art.assertCounts(t, map[string]int{
+		"listImages": 1,
+	})
 
 	fmt.Println(string(data))
 
@@ -238,17 +295,7 @@ func TestGetImage(t *testing.T) {
 }
 
 func TestListRepos(t *testing.T) {
-	a := &artifactsHandler{
-		compartmentId: "compartmentId",
-		client:        &MockArtifactsClient{},
-	}
-
-	req := httptest.NewRequest("GET", "/repos", nil)
-	w := httptest.NewRecorder()
-	a.ServeHTTP(w, req)
-	res := w.Result()
-	defer res.Body.Close()
-	data, err := ioutil.ReadAll(w.Result().Body)
+	art, res, data, err := request(t, "GET", "/repos")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -257,7 +304,9 @@ func TestListRepos(t *testing.T) {
 		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
 	}
 
-	a.assertRequestCounts(t, 1, 0, 0, 0)
+	art.assertCounts(t, map[string]int{
+		"listRepos": 1,
+	})
 
 	fmt.Println(string(data))
 
@@ -279,52 +328,80 @@ func TestListRepos(t *testing.T) {
 }
 
 func TestCreate(t *testing.T) {
-	a := &artifactsHandler{
-		compartmentId: "compartmentId",
-		client:        &MockArtifactsClient{},
+	testCases := []struct {
+		imageName string
+		create    bool
+	}{
+		{"existing-image", false},
+		{"new-image", true},
 	}
 
-	req := httptest.NewRequest("POST", "/repo/new-image", nil)
-	w := httptest.NewRecorder()
-	a.ServeHTTP(w, req)
-	res := w.Result()
-	defer res.Body.Close()
-	data, err := ioutil.ReadAll(w.Result().Body)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%v,%v", tc.imageName, tc.create), func(t *testing.T) {
 
-	if res.StatusCode != 200 {
-		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
-	}
-	var result map[string]interface{}
-	json.Unmarshal([]byte(data), &result)
-	if result["displayName"] != "new-image" {
-		t.Errorf("Expected DisplayName 'new-image': %v", result["displayName"])
-	}
+			art, res, data, err := request(t, "POST", "/repo/"+tc.imageName)
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
 
-	a.assertRequestCounts(t, 0, 1, 0, 0)
+			if res.StatusCode != 200 {
+				t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
+			}
+
+			if tc.create {
+				art.assertCounts(t, map[string]int{
+					"createRepos": 1,
+				})
+			} else {
+				art.assertCounts(t, map[string]int{
+					"listRepos":   1,
+					"createRepos": 1,
+					"createNoops": 1,
+				})
+			}
+
+			var result map[string]interface{}
+			err2 := json.Unmarshal([]byte(data), &result)
+			if err2 != nil {
+				t.Errorf("Unexpected error: %v", err2)
+			}
+
+			if result["displayName"] != tc.imageName {
+				t.Errorf("Expected '%v': %v", tc.imageName, result)
+			}
+		})
+	}
 }
 
 func TestDelete(t *testing.T) {
-	a := &artifactsHandler{
-		compartmentId: "compartmentId",
-		client:        &MockArtifactsClient{},
+	{
+		art, res, _, err := request(t, "DELETE", "/repo/new-image")
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		if res.StatusCode != 200 {
+			t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
+		}
+
+		art.assertCounts(t, map[string]int{
+			"listRepos": 1,
+		})
 	}
 
 	{
-		req := httptest.NewRequest("DELETE", "/repo/new-image", nil)
-		w := httptest.NewRecorder()
-		a.ServeHTTP(w, req)
+		art, res, _, err := request(t, "DELETE", "/repo/existing-image")
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
 
-		a.assertRequestCounts(t, 1, 0, 0, 0)
-	}
+		if res.StatusCode != 200 {
+			t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
+		}
 
-	{
-		req := httptest.NewRequest("DELETE", "/repo/existing-image", nil)
-		w := httptest.NewRecorder()
-		a.ServeHTTP(w, req)
-
-		a.assertRequestCounts(t, 2, 0, 1, 0)
+		art.assertCounts(t, map[string]int{
+			"listRepos":   1,
+			"deleteRepos": 1,
+		})
 	}
 }
