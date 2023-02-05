@@ -60,12 +60,14 @@ func (c *ecrHandler) ListRepositories(w http.ResponseWriter, r *http.Request) {
 	}
 	repos, err := c.client.DescribeRepositories(context.TODO(), &input)
 	if err != nil {
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	jsonBytes, err := json.Marshal(repos.Repositories)
 	if err != nil {
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -86,7 +88,7 @@ func (c *ecrHandler) getRepoByName(name string) (*types.Repository, error) {
 			log.Printf("Repo '%s' not found\n", name)
 			return nil, nil
 		}
-		log.Println("Error:", err)
+		log.Println("ERROR:", err)
 		return nil, err
 	}
 	log.Printf("Repo '%s' found: %s\n", name, *repos.Repositories[0].RepositoryUri)
@@ -120,8 +122,8 @@ func (c *ecrHandler) getRepositoryAsJson(r *http.Request) (bool, string, []byte,
 func (c *ecrHandler) GetRepository(w http.ResponseWriter, r *http.Request) {
 	found, name, jsonBytes, err := c.getRepositoryAsJson(r)
 	if err != nil {
-		log.Println("Error:", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
@@ -138,8 +140,8 @@ func (c *ecrHandler) GetRepository(w http.ResponseWriter, r *http.Request) {
 func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	repoName, tag, err := registry.ImageGetNameAndTag(r)
 	if err != nil {
-		log.Printf("ERROR: %v\n", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 	}
 	fullname := fmt.Sprintf("%s:%s", repoName, tag)
 
@@ -156,12 +158,11 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 		var awsErrRepo *types.RepositoryNotFoundException
 		if errors.As(err, &awsErrImage) || errors.As(err, &awsErrRepo) {
 			log.Printf("Repo '%s' not found\n", fullname)
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("null"))
+			registry.NotFound(w, r)
 			return
 		}
-		log.Println("Error:", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
@@ -169,7 +170,8 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Image '%s' found: %s\n", fullname, image.ImageTags)
 	jsonBytes, err := json.Marshal(image)
 	if err != nil {
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -242,8 +244,8 @@ func (c *ecrHandler) setRepositoryPolicy(repoName string) error {
 func (c *ecrHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
 	name, err := registry.RepoGetName(r)
 	if err != nil {
-		log.Println("Error:", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
@@ -264,20 +266,20 @@ func (c *ecrHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
 		if errors.As(err, &awsErr) {
 			found, _, jsonBytes, err := c.getRepositoryAsJson(r)
 			if err != nil {
-				log.Println("Error:", err)
-				registry.InternalServerError(w, r)
+				log.Println("ERROR:", err)
+				registry.InternalServerError(w, r, err)
 				return
 			}
 			if !found {
 				log.Printf("RepositoryAlreadyExistsException but repository not found %s: %v", name, awsErr)
-				registry.InternalServerError(w, r)
+				registry.InternalServerError(w, r, err)
 				return
 			}
 			log.Println("Repo already exists", name)
 			jsonResponse = jsonBytes
 		} else {
-			log.Println("Error:", err)
-			registry.InternalServerError(w, r)
+			log.Println("ERROR:", err)
+			registry.InternalServerError(w, r, err)
 			return
 		}
 	}
@@ -285,15 +287,15 @@ func (c *ecrHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
 	err = c.setRepositoryPolicy(name)
 	if err != nil {
 		log.Println("ERROR:", err)
-		registry.InternalServerError(w, r)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
 	if jsonResponse == nil {
 		jsonBytes, err := json.Marshal(createResponse.Repository)
 		if err != nil {
-			log.Println("Error:", err)
-			registry.InternalServerError(w, r)
+			log.Println("ERROR:", err)
+			registry.InternalServerError(w, r, err)
 			return
 		}
 		jsonResponse = jsonBytes
@@ -327,8 +329,8 @@ func (c *ecrHandler) deleteRepositoryPolicy(repoName string) error {
 func (c *ecrHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
 	name, err := registry.RepoGetName(r)
 	if err != nil {
-		log.Println("Error:", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
@@ -336,8 +338,8 @@ func (c *ecrHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
 
 	err = c.deleteRepositoryPolicy(name)
 	if err != nil {
-		log.Println("Error:", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
@@ -357,7 +359,8 @@ func (c *ecrHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
@@ -367,13 +370,14 @@ func (c *ecrHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
 func (c *ecrHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	token, err := c.client.GetAuthorizationToken(context.TODO(), &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
-		log.Println("Error:", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	if len(token.AuthorizationData) != 1 {
-		log.Println("Error: expected 1 token, got", len(token.AuthorizationData))
-		registry.InternalServerError(w, r)
+		msg := fmt.Errorf("expected 1 token, got %d", len(token.AuthorizationData))
+		log.Println("ERROR:", msg)
+		registry.InternalServerError(w, r, msg)
 		return
 	}
 
@@ -383,8 +387,8 @@ func (c *ecrHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonBytes, err := json.Marshal(resp)
 	if err != nil {
-		log.Println("Error:", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

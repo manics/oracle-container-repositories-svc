@@ -413,7 +413,7 @@ func TestGetImage(t *testing.T) {
 					t.Errorf("Expected 'existing-image': %v", result)
 				}
 			} else {
-				if string(data) != "null" {
+				if string(data) != "null\n" {
 					t.Errorf("Expected 'null': %v", string(data))
 				}
 			}

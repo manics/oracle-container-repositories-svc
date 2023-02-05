@@ -2,6 +2,7 @@
 package registry
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -42,31 +43,31 @@ func CheckAuthorised(originalHandler http.Handler, authToken string) http.Handle
 }
 
 // InternalServerError is a handler that returns a 500 HTTP error
-func InternalServerError(w http.ResponseWriter, r *http.Request) {
-	log.Println("ERROR: %r", r)
+func InternalServerError(w http.ResponseWriter, r *http.Request, errorResponse error) {
+	errObj := map[string]string{
+		"error": errorResponse.Error(),
+	}
+	jsonBytes, err := json.Marshal(errObj)
+	if err != nil {
+		log.Println("ERROR:", err)
+		jsonBytes = []byte(`{"error": "internal server error"}` + "\n")
+	}
+	jsonBytes = append(jsonBytes, byte('\n'))
 	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte("internal server error\n"))
-}
-
-// ClientError is a handler that returns a 400 HTTP error
-func ClientError(w http.ResponseWriter, r *http.Request, err string) {
-	log.Println("ERROR: %r", r)
-	w.WriteHeader(http.StatusBadRequest)
-	w.Write([]byte(fmt.Sprintf("client error: %v\n", err)))
+	w.Write(jsonBytes)
 }
 
 // NotFound is a handler that returns a 404 HTTP error
 func NotFound(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("NotFound %r", r)
 	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("not found\n"))
+	w.Write([]byte("null\n"))
 }
 
 // NotAuthorised is a handler that returns a 403 HTTP error
 func NotAuthorised(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("NotAuthorised %r", r)
 	w.WriteHeader(http.StatusForbidden)
-	w.Write([]byte("not authorised\n"))
+	w.Write([]byte(`{"error": "not authorised"}` + "\n"))
 }
 
 // RepoGetName extracts the repository name from the request path

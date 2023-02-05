@@ -51,12 +51,14 @@ func (c *artifactsHandler) ListRepositories(w http.ResponseWriter, r *http.Reque
 		CompartmentId: &c.compartmentId,
 	})
 	if err != nil {
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	jsonBytes, err := json.Marshal(repos.Items)
 	if err != nil {
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -91,7 +93,7 @@ func (c *artifactsHandler) getByName(r *http.Request) (*artifacts.ContainerRepos
 		DisplayName:   &name,
 	})
 	if err != nil {
-		log.Println("Error:", err)
+		log.Println("ERROR:", err)
 		return nil, "", err
 	}
 	if len(repos.Items) == 0 {
@@ -106,20 +108,21 @@ func (c *artifactsHandler) getByName(r *http.Request) (*artifacts.ContainerRepos
 func (c *artifactsHandler) GetRepository(w http.ResponseWriter, r *http.Request) {
 	repo, name, err := c.getByName(r)
 	if err != nil {
-		log.Println("Error:", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
 	log.Printf("Getting repo %s", name)
 
 	if repo == nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("null"))
+		registry.NotFound(w, r)
+		return
 	} else {
 		jsonBytes, err := json.Marshal(repo)
 		if err != nil {
-			registry.InternalServerError(w, r)
+			log.Println("ERROR:", err)
+			registry.InternalServerError(w, r, err)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -130,13 +133,13 @@ func (c *artifactsHandler) GetRepository(w http.ResponseWriter, r *http.Request)
 func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	namespacedRepository, tag, err := registry.ImageGetNameAndTag(r)
 	if err != nil {
-		log.Printf("ERROR: %v\n", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 	}
 	repoName, err := c.dropNamespace(namespacedRepository)
 	if err != nil {
-		log.Printf("ERROR: %v\n", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 	}
 
 	fullname := fmt.Sprintf("%s:%s", repoName, tag)
@@ -150,13 +153,12 @@ func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Println("ERROR:", err)
-		registry.InternalServerError(w, r)
+		registry.InternalServerError(w, r, err)
 	}
 
 	if len(images.Items) == 0 {
 		log.Printf("Image '%s' not found\n", fullname)
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("null"))
+		registry.NotFound(w, r)
 		return
 	}
 
@@ -164,7 +166,8 @@ func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Image '%s' found: %s\n", fullname, *image.Id)
 	jsonBytes, err := json.Marshal(image)
 	if err != nil {
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -175,13 +178,13 @@ func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Reque
 	namespacedRepository, err := registry.RepoGetName(r)
 	if err != nil {
 		log.Println("ERROR:", err)
-		registry.InternalServerError(w, r)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	name, err := c.dropNamespace(namespacedRepository)
 	if err != nil {
 		log.Println("ERROR:", err)
-		registry.InternalServerError(w, r)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
@@ -195,43 +198,44 @@ func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Reque
 	})
 
 	if err != nil {
-		log.Printf("ERROR: %v\n", err)
+		log.Println("ERROR:", err)
 		serviceErr, ok := common.IsServiceError(err)
 		if ok && serviceErr.GetCode() == "NAMESPACE_CONFLICT" {
 			log.Printf("Repository already exists: %v\n", err)
 
 			repo, name, err := c.getByName(r)
 			if err != nil {
-				log.Println("Error:", err)
-				registry.InternalServerError(w, r)
+				log.Println("ERROR:", err)
+				registry.InternalServerError(w, r, err)
 				return
 			}
 
 			if repo == nil {
 				log.Printf("NAMESPACE_CONFLICT but repository not found %s: %v", name, err)
-				registry.InternalServerError(w, r)
+				registry.InternalServerError(w, r, err)
 				return
 			}
 
 			jsonBytes, err := json.Marshal(repo)
 			if err != nil {
-				log.Printf("ERROR: %v\n", err)
-				registry.InternalServerError(w, r)
+				log.Println("ERROR:", err)
+				registry.InternalServerError(w, r, err)
 				return
 			}
 
 			w.WriteHeader(http.StatusOK)
 			w.Write(jsonBytes)
 			return
+		} else {
+			registry.InternalServerError(w, r, err)
+			return
 		}
-
-		return
 	}
 
 	jsonBytes, err := json.Marshal(createResponse.ContainerRepository)
 	if err != nil {
-		log.Printf("ERROR: %v\n", err)
-		registry.InternalServerError(w, r)
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -242,7 +246,7 @@ func (c *artifactsHandler) DeleteRepository(w http.ResponseWriter, r *http.Reque
 	repo, name, err := c.getByName(r)
 	if err != nil {
 		log.Println("ERROR:", err)
-		registry.InternalServerError(w, r)
+		registry.InternalServerError(w, r, err)
 		return
 	}
 
@@ -253,7 +257,8 @@ func (c *artifactsHandler) DeleteRepository(w http.ResponseWriter, r *http.Reque
 			RepositoryId: repo.Id,
 		})
 		if err != nil {
-			registry.InternalServerError(w, r)
+			log.Println("ERROR:", err)
+			registry.InternalServerError(w, r, err)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -263,8 +268,8 @@ func (c *artifactsHandler) DeleteRepository(w http.ResponseWriter, r *http.Reque
 
 func (c *artifactsHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	log.Println("GetToken not implemented")
-	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("not implemented\n"))
+	registry.NotFound(w, r)
+	return
 }
 
 func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) {

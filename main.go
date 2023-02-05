@@ -32,7 +32,8 @@ func (h *healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonBytes, err := json.Marshal(versionInfo)
 		if err != nil {
-			registry.InternalServerError(w, r)
+			log.Println("ERROR:", err)
+			registry.InternalServerError(w, r, err)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -53,6 +54,8 @@ func getAuthToken() (string, error) {
 
 // The main entrypoint for the service
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	authToken, err := getAuthToken()
 	if err != nil {
 		log.Fatalln(err)
