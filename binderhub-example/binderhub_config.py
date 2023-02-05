@@ -7,7 +7,7 @@ from binderhub.registry import DockerRegistry
 class ExternalRegistryHelper(DockerRegistry):
 
     service_url = Unicode(
-        "http://oracle-container-repositories-svc:8080",
+        "http://binderhub-container-registry-helper:8080",
         allow_none=False,
         help="The URL of the registry helper micro-service.",
         config=True,

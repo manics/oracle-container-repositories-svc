@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/manics/oracle-container-repositories-svc/registry"
+	"github.com/manics/binderhub-container-registry-helper/registry"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"

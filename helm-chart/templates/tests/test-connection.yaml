@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: "{{ include "oracle-container-repositories-svc.fullname" . }}-test-connection"
+  name: "{{ include "binderhub-container-registry-helper.fullname" . }}-test-connection"
   labels:
-    {{- include "oracle-container-repositories-svc.labels" . | nindent 4 }}
+    {{- include "binderhub-container-registry-helper.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": test
 spec:
@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "oracle-container-repositories-svc.fullname" . }}:{{ .Values.service.port }}']
+      args: ['{{ include "binderhub-container-registry-helper.fullname" . }}:{{ .Values.service.port }}']
   restartPolicy: Never

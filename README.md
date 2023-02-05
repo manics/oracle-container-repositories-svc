@@ -1,11 +1,11 @@
-# Oracle Cloud Infrastructure Registry Micro service
+# BinderHub Container Registry Helper
 
-[![Go](https://github.com/manics/oracle-container-repositories-svc/actions/workflows/build.yml/badge.svg)](https://github.com/manics/oracle-container-repositories-svc/actions/workflows/build.yml)
+[![Go](https://github.com/manics/binderhub-container-registry-helper/actions/workflows/build.yml/badge.svg)](https://github.com/manics/binderhub-container-registry-helper/actions/workflows/build.yml)
 
-A microservice to help BinderHub work with [Oracle Cloud Infrastructure container registry](https://docs.oracle.com/en-us/iaas/Content/Registry/Concepts/registryoverview.htm).
+A microservice to help BinderHub work with Public cloud container registries.
 
-This microservice wraps some API calls for creating a container repository in an OCI tenancy and makes this available to BinderHub as a simple REST call.
-This avoids the need to integrate OCI API libraries into BinderHub.
+Some cloud registries require a repository to be created before it can be used.
+This micro-service provides a simple REST API to create repositories on demand, avoiding the need to integrate cloud provider libraries into BinderHub.
 
 # Example
 

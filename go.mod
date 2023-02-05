@@ -1,4 +1,4 @@
-module github.com/manics/oracle-container-repositories-svc
+module github.com/manics/binderhub-container-registry-helper
 
 go 1.18
 
@@ -28,8 +28,8 @@ require (
 	golang.org/x/sys v0.4.0 // indirect
 )
 
-replace github.com/manics/oracle-container-repositories-svc/oracle => ./oracle
+replace github.com/manics/binderhub-container-registry-helper/oracle => ./oracle
 
-replace github.com/manics/oracle-container-repositories-svc/amazon => ./amazon
+replace github.com/manics/binderhub-container-registry-helper/amazon => ./amazon
 
-replace github.com/manics/oracle-container-repositories-svc/registry => ../registry
+replace github.com/manics/binderhub-container-registry-helper/registry => ../registry

@@ -13,7 +13,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/manics/oracle-container-repositories-svc/registry"
+	"github.com/manics/binderhub-container-registry-helper/registry"
 
 	"github.com/oracle/oci-go-sdk/identity"
 	"github.com/oracle/oci-go-sdk/v65/artifacts"

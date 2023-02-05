@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/manics/oracle-container-repositories-svc/amazon"
-	"github.com/manics/oracle-container-repositories-svc/oracle"
-	"github.com/manics/oracle-container-repositories-svc/registry"
+	"github.com/manics/binderhub-container-registry-helper/amazon"
+	"github.com/manics/binderhub-container-registry-helper/oracle"
+	"github.com/manics/binderhub-container-registry-helper/registry"
 )
 
 var (

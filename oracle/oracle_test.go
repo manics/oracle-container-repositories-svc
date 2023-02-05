@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/manics/oracle-container-repositories-svc/registry"
+	"github.com/manics/binderhub-container-registry-helper/registry"
 
 	"github.com/oracle/oci-go-sdk/v65/artifacts"
 	"github.com/oracle/oci-go-sdk/v65/common"

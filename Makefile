@@ -10,7 +10,7 @@ test: build
 	go test ./...
 
 clean:
-	rm -f oracle-container-repositories-svc
+	rm -f binderhub-container-registry-helper
 
 container:
 	podman build -t binderhub-container-registry-helper .
