@@ -7,7 +7,10 @@ build:
 	go build $(GOFLAGS) .
 
 test: build
-	go test -v ./...
+	go test ./...
 
 clean:
 	rm -f oracle-container-repositories-svc
+
+container:
+	podman build -t binderhub-container-registry-helper .
