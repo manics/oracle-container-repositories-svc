@@ -2,7 +2,7 @@ package registry
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +13,10 @@ type mockHandler struct {
 
 func (h *mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("hello!"))
+	_, errw := w.Write([]byte("hello!"))
+	if errw != nil {
+		panic(errw)
+	}
 }
 
 func TestCheckAuthorised(t *testing.T) {
@@ -41,7 +44,7 @@ func TestCheckAuthorised(t *testing.T) {
 			a.ServeHTTP(w, req)
 			res := w.Result()
 			defer res.Body.Close()
-			_, err := ioutil.ReadAll(w.Result().Body)
+			_, err := io.ReadAll(w.Result().Body)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}

@@ -54,20 +54,29 @@ func InternalServerError(w http.ResponseWriter, r *http.Request, errorResponse e
 	}
 	jsonBytes = append(jsonBytes, byte('\n'))
 	w.WriteHeader(http.StatusInternalServerError)
-	w.Write(jsonBytes)
+	_, errw := w.Write(jsonBytes)
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 // NotFound is a handler that returns a 404 HTTP error
 func NotFound(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("null\n"))
+	_, errw := w.Write([]byte("null\n"))
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 // NotAuthorised is a handler that returns a 403 HTTP error
 func NotAuthorised(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("NotAuthorised %r", r)
 	w.WriteHeader(http.StatusForbidden)
-	w.Write([]byte(`{"error": "not authorised"}` + "\n"))
+	_, errw := w.Write([]byte(`{"error": "not authorised"}` + "\n"))
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 // RepoGetName extracts the repository name from the request path
@@ -96,7 +105,7 @@ func ImageGetNameAndTag(r *http.Request) (string, string, error) {
 		tag = fullname[sep+1:]
 	}
 
-	if len(tag) == 0 {
+	if tag == "" {
 		err := fmt.Sprintf("Invalid tag in path: %s", r.URL.Path)
 		return "", "", errors.New(err)
 	}
@@ -105,10 +114,10 @@ func ImageGetNameAndTag(r *http.Request) (string, string, error) {
 }
 
 var (
-	listReposRe = regexp.MustCompile(`^\/repos$`)
-	repoRe      = regexp.MustCompile(`^\/repo\/(\S+)$`)
-	imageRe     = regexp.MustCompile(`^\/image\/(\S+)$`)
-	tokenRe     = regexp.MustCompile(`^\/token$`)
+	listReposRe = regexp.MustCompile(`^/repos$`)
+	repoRe      = regexp.MustCompile(`^/repo/(\S+)$`)
+	imageRe     = regexp.MustCompile(`^/image/(\S+)$`)
+	tokenRe     = regexp.MustCompile(`^/token$`)
 )
 
 // IRegistryClient is an interface that all registry helpers must implement

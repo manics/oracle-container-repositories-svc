@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -202,10 +202,10 @@ func (e *MockEcrClient) assertCounts(t *testing.T, expected map[string]int) {
 }
 
 func request(t *testing.T, method string, path string) (MockEcrClient, *http.Response, []byte, error) {
-	ecr := MockEcrClient{}
+	ecrClient := MockEcrClient{}
 	e := &ecrHandler{
 		registryId: registryId,
-		client:     &ecr,
+		client:     &ecrClient,
 	}
 	s := &registry.RegistryServer{
 		Client: e,
@@ -216,14 +216,14 @@ func request(t *testing.T, method string, path string) (MockEcrClient, *http.Res
 	s.ServeHTTP(w, req)
 	res := w.Result()
 	defer res.Body.Close()
-	data, err := ioutil.ReadAll(w.Result().Body)
-	return ecr, res, data, err
+	data, err := io.ReadAll(w.Result().Body)
+	return ecrClient, res, data, err
 }
 
 // Tests
 
 func TestList(t *testing.T) {
-	ecr, res, data, err := request(t, "GET", "/repos")
+	ecrClient, res, data, err := request(t, "GET", "/repos")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -232,7 +232,7 @@ func TestList(t *testing.T) {
 		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
 	}
 
-	ecr.assertCounts(t, map[string]int{
+	ecrClient.assertCounts(t, map[string]int{
 		"describeRepos": 1,
 	})
 
@@ -343,7 +343,7 @@ func TestGetRepo(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.imageName, tc.expectedStatusCode), func(t *testing.T) {
-			ecr, res, data, err := request(t, "GET", "/repo/"+tc.imageName)
+			ecrClient, res, data, err := request(t, "GET", "/repo/"+tc.imageName)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -352,7 +352,7 @@ func TestGetRepo(t *testing.T) {
 				t.Errorf("Expected StatusCode %v: %v", tc.expectedStatusCode, res.StatusCode)
 			}
 
-			ecr.assertCounts(t, map[string]int{
+			ecrClient.assertCounts(t, map[string]int{
 				"describeRepos": 1,
 			})
 
@@ -366,10 +366,8 @@ func TestGetRepo(t *testing.T) {
 				if result["RepositoryName"] != "existing-image" {
 					t.Errorf("Expected 'existing-image': %v", result)
 				}
-			} else {
-				if string(data) != "null" {
-					t.Errorf("Expected 'null': %v", string(data))
-				}
+			} else if string(data) != "null" {
+				t.Errorf("Expected 'null': %v", string(data))
 			}
 		})
 	}
@@ -389,7 +387,7 @@ func TestGetImage(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.tag, tc.expectedStatusCode), func(t *testing.T) {
 
-			ecr, res, data, err := request(t, "GET", fmt.Sprintf("/image/%s:%s", tc.imageName, tc.tag))
+			ecrClient, res, data, err := request(t, "GET", fmt.Sprintf("/image/%s:%s", tc.imageName, tc.tag))
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -398,7 +396,7 @@ func TestGetImage(t *testing.T) {
 				t.Errorf("Expected StatusCode %v: %v", tc.expectedStatusCode, res.StatusCode)
 			}
 
-			ecr.assertCounts(t, map[string]int{
+			ecrClient.assertCounts(t, map[string]int{
 				"describeImages": 1,
 			})
 
@@ -412,10 +410,8 @@ func TestGetImage(t *testing.T) {
 				if result["RepositoryName"] != "existing-image" {
 					t.Errorf("Expected 'existing-image': %v", result)
 				}
-			} else {
-				if string(data) != "null\n" {
-					t.Errorf("Expected 'null': %v", string(data))
-				}
+			} else if string(data) != "null\n" {
+				t.Errorf("Expected 'null': %v", string(data))
 			}
 		})
 	}
@@ -432,7 +428,7 @@ func TestCreate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.imageName, tc.create), func(t *testing.T) {
-			ecr, res, data, err := request(t, "POST", "/repo/"+tc.imageName)
+			ecrClient, res, data, err := request(t, "POST", "/repo/"+tc.imageName)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -442,11 +438,11 @@ func TestCreate(t *testing.T) {
 			}
 
 			if tc.create {
-				ecr.assertCounts(t, map[string]int{
+				ecrClient.assertCounts(t, map[string]int{
 					"createRepos": 1,
 				})
 			} else {
-				ecr.assertCounts(t, map[string]int{
+				ecrClient.assertCounts(t, map[string]int{
 					"describeRepos": 1,
 					"createRepos":   1,
 					"createNoops":   1,
@@ -477,7 +473,7 @@ func TestDelete(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.imageName, tc.delete), func(t *testing.T) {
-			ecr, res, _, err := request(t, "DELETE", "/repo/"+tc.imageName)
+			ecrClient, res, _, err := request(t, "DELETE", "/repo/"+tc.imageName)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -487,12 +483,12 @@ func TestDelete(t *testing.T) {
 			}
 
 			if tc.delete {
-				ecr.assertCounts(t, map[string]int{
+				ecrClient.assertCounts(t, map[string]int{
 					"deleteRepos":      1,
 					"deleteLifecycles": 1,
 				})
 			} else {
-				ecr.assertCounts(t, map[string]int{
+				ecrClient.assertCounts(t, map[string]int{
 					"deleteRepos":      1,
 					"deleteNoops":      1,
 					"deleteLifecycles": 1,
@@ -504,7 +500,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestToken(t *testing.T) {
-	ecr, res, data, err := request(t, "POST", "/token")
+	ecrClient, res, data, err := request(t, "POST", "/token")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -513,7 +509,7 @@ func TestToken(t *testing.T) {
 		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
 	}
 
-	ecr.assertCounts(t, map[string]int{
+	ecrClient.assertCounts(t, map[string]int{
 		"getTokens": 1,
 	})
 

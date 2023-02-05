@@ -37,7 +37,10 @@ func (h *healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write(jsonBytes)
+		_, errw := w.Write(jsonBytes)
+		if errw != nil {
+			log.Println("ERROR:", errw)
+		}
 	} else {
 		registry.NotFound(w, r)
 		return
@@ -86,5 +89,8 @@ func main() {
 
 	listen := "0.0.0.0:8080"
 	log.Printf("Listening on %v\n", listen)
-	http.ListenAndServe(listen, mux)
+	errw := http.ListenAndServe(listen, mux)
+	if errw != nil {
+		log.Fatalln(errw)
+	}
 }

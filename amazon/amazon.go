@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 
 	"github.com/manics/oracle-container-repositories-svc/registry"
@@ -20,13 +19,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-)
-
-var (
-	listReposRe = regexp.MustCompile(`^\/repos$`)
-	repoRe      = regexp.MustCompile(`^\/repo\/(\S+)$`)
-	imageRe     = regexp.MustCompile(`^\/image\/(\S+)$`)
-	tokenRe     = regexp.MustCompile(`^\/token$`)
 )
 
 type IEcrClient interface {
@@ -71,7 +63,10 @@ func (c *ecrHandler) ListRepositories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	_, errw := w.Write(jsonBytes)
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 func (c *ecrHandler) getRepoByName(name string) (*types.Repository, error) {
@@ -134,7 +129,10 @@ func (c *ecrHandler) GetRepository(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}
-	w.Write(jsonBytes)
+	_, errw := w.Write(jsonBytes)
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
@@ -175,7 +173,10 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	_, errw := w.Write(jsonBytes)
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 func lifecyclePolicy(priority int, countType string, countNumber int) string {
@@ -301,7 +302,10 @@ func (c *ecrHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
 		jsonResponse = jsonBytes
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonResponse)
+	_, errw := w.Write(jsonResponse)
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 func (c *ecrHandler) deleteRepositoryPolicy(repoName string) error {
@@ -392,7 +396,10 @@ func (c *ecrHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	_, errw := w.Write(jsonBytes)
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 func envvarIntGreaterThanZero(envvar string) (int, error) {

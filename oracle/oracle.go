@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/manics/oracle-container-repositories-svc/registry"
@@ -21,12 +20,6 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"github.com/oracle/oci-go-sdk/v65/objectstorage"
-)
-
-var (
-	listReposRe = regexp.MustCompile(`^\/repos$`)
-	repoRe      = regexp.MustCompile(`^\/repo\/(\S+)$`)
-	imageRe     = regexp.MustCompile(`^\/image\/(\S+)$`)
 )
 
 type IArtifactsClient interface {
@@ -62,7 +55,10 @@ func (c *artifactsHandler) ListRepositories(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	_, errw := w.Write(jsonBytes)
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 func (c *artifactsHandler) dropNamespace(namespacedRepository string) (string, error) {
@@ -126,7 +122,10 @@ func (c *artifactsHandler) GetRepository(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write(jsonBytes)
+		_, errw := w.Write(jsonBytes)
+		if errw != nil {
+			log.Println("ERROR:", errw)
+		}
 	}
 }
 
@@ -171,7 +170,10 @@ func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	_, errw := w.Write(jsonBytes)
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
@@ -224,7 +226,10 @@ func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Reque
 			}
 
 			w.WriteHeader(http.StatusOK)
-			w.Write(jsonBytes)
+			_, errw := w.Write(jsonBytes)
+			if errw != nil {
+				log.Println("ERROR:", errw)
+			}
 			return
 		} else {
 			registry.InternalServerError(w, r, err)
@@ -239,7 +244,10 @@ func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	_, errw := w.Write(jsonBytes)
+	if errw != nil {
+		log.Println("ERROR:", errw)
+	}
 }
 
 func (c *artifactsHandler) DeleteRepository(w http.ResponseWriter, r *http.Request) {
@@ -269,14 +277,14 @@ func (c *artifactsHandler) DeleteRepository(w http.ResponseWriter, r *http.Reque
 func (c *artifactsHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	log.Println("GetToken not implemented")
 	registry.NotFound(w, r)
-	return
 }
 
 func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) {
 	var cfg common.ConfigurationProvider
 	var err error
 
-	if len(args) == 0 {
+	switch len(args) {
+	case 0:
 		// Instance principals (like AWS instance roles)
 		// https://github.com/oracle/oci-go-sdk/blob/v65.28.1/example/example_instance_principals_test.go
 		cfg, err = auth.InstancePrincipalConfigurationProvider()
@@ -284,7 +292,7 @@ func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) 
 			log.Printf("failed to load configuration, %v", err)
 			return nil, err
 		}
-	} else if len(args) == 1 {
+	case 1:
 		// User principals, using configuration file
 		cfg_file := args[0]
 		cfg, err = common.ConfigurationProviderFromFile(cfg_file, "")
@@ -292,7 +300,7 @@ func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) 
 			log.Printf("failed to load configuration, %v", err)
 			return nil, err
 		}
-	} else {
+	default:
 		return nil, errors.New("arguments: [oci-config-file]")
 	}
 

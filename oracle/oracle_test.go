@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -217,7 +217,7 @@ func request(t *testing.T, method string, path string) (MockArtifactsClient, *ht
 	s.ServeHTTP(w, req)
 	res := w.Result()
 	defer res.Body.Close()
-	data, err := ioutil.ReadAll(w.Result().Body)
+	data, err := io.ReadAll(w.Result().Body)
 	return art, res, data, err
 }
 
