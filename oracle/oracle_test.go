@@ -206,6 +206,7 @@ func request(t *testing.T, method string, path string) (MockArtifactsClient, *ht
 	a := &artifactsHandler{
 		compartmentId: "compartmentId",
 		client:        &art,
+		namespace:     "namespace",
 	}
 	s := &registry.RegistryServer{
 		Client: a,
@@ -226,6 +227,7 @@ func TestGetByName(t *testing.T) {
 	a := &artifactsHandler{
 		compartmentId: "compartmentId",
 		client:        &MockArtifactsClient{},
+		namespace:     "namespace",
 	}
 
 	{
@@ -238,6 +240,22 @@ func TestGetByName(t *testing.T) {
 
 	{
 		req := httptest.NewRequest("GET", "/repo/existing-image", nil)
+		_, _, err := a.getByName(req)
+		if err == nil {
+			t.Errorf("Expected error: %v", err)
+		}
+	}
+
+	{
+		req := httptest.NewRequest("GET", "/repo/incorrect-namespace/existing-image", nil)
+		_, _, err := a.getByName(req)
+		if err == nil {
+			t.Errorf("Expected error: %v", err)
+		}
+	}
+
+	{
+		req := httptest.NewRequest("GET", "/repo/namespace/existing-image", nil)
 		container, name, err := a.getByName(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -254,7 +272,7 @@ func TestGetByName(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/repo/new-image", nil)
+		req := httptest.NewRequest("GET", "/repo/namespace/new-image", nil)
 		container, name, err := a.getByName(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -269,7 +287,7 @@ func TestGetByName(t *testing.T) {
 }
 
 func TestGetImage(t *testing.T) {
-	art, res, data, err := request(t, "GET", "/image/existing-image:tag")
+	art, res, data, err := request(t, "GET", "/image/namespace/existing-image:tag")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -340,7 +358,7 @@ func TestCreate(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.imageName, tc.create), func(t *testing.T) {
 
-			art, res, data, err := request(t, "POST", "/repo/"+tc.imageName)
+			art, res, data, err := request(t, "POST", "/repo/namespace/"+tc.imageName)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -376,7 +394,7 @@ func TestCreate(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	{
-		art, res, _, err := request(t, "DELETE", "/repo/new-image")
+		art, res, _, err := request(t, "DELETE", "/repo/namespace/new-image")
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -391,7 +409,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	{
-		art, res, _, err := request(t, "DELETE", "/repo/existing-image")
+		art, res, _, err := request(t, "DELETE", "/repo/namespace/existing-image")
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}

@@ -26,12 +26,10 @@ class ExternalRegistryHelper(DockerRegistry):
         Otherwise create the container repository.
 
         The full registry image URL has the form:
-        CONTAINER_REGISTRY/OCIR_NAMESPACE/OCIR_IMAGE_NAME:TAG
-        but the BinderHub image is OCIR_NAMESPACE/OCIR_IMAGE_NAME
-        so we need to remove the OCIR_NAMESPACE component
+        CONTAINER_REGISTRY/OCIR_NAMESPACE/OCIR_REPOSITORY_NAME:TAG
+        the BinderHub image is OCIR_NAMESPACE/OCIR_REPOSITORY_NAME
         """
         client = httpclient.AsyncHTTPClient()
-        image = image.split("/", 1)[1]
         repo_url = f"{self.service_url}/repo/{image}"
         headers = {"Authorization": f"Bearer {self.auth_token}"}
 

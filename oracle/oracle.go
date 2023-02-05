@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/manics/oracle-container-repositories-svc/registry"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/artifacts"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/common/auth"
+	"github.com/oracle/oci-go-sdk/v65/objectstorage"
 )
 
 var (
@@ -40,6 +42,7 @@ type IArtifactsClient interface {
 type artifactsHandler struct {
 	compartmentId string
 	client        IArtifactsClient
+	namespace     string
 }
 
 func (c *artifactsHandler) ListRepositories(w http.ResponseWriter, r *http.Request) {
@@ -60,10 +63,26 @@ func (c *artifactsHandler) ListRepositories(w http.ResponseWriter, r *http.Reque
 	w.Write(jsonBytes)
 }
 
+func (c *artifactsHandler) dropNamespace(namespacedRepository string) (string, error) {
+	// OCI has a namespace prefix which isn't part of the repository name:
+	// OCIR_NAMESPACE/OCIR_REPOSITORY_NAME:TAG
+	namespace, reponame, found := strings.Cut(namespacedRepository, "/")
+	if !found {
+		return "", fmt.Errorf("invalid namespace/repository: %s", namespacedRepository)
+	}
+	if namespace != c.namespace {
+		return "", fmt.Errorf("namespace does not match tenancy namespace %s: %s", c.namespace, namespace)
+	}
+	return reponame, nil
+}
+
 func (c *artifactsHandler) getByName(r *http.Request) (*artifacts.ContainerRepositorySummary, string, error) {
-	name, err := registry.RepoGetName(r)
+	namespacedRepository, err := registry.RepoGetName(r)
 	if err != nil {
-		log.Println(err)
+		return nil, "", err
+	}
+	name, err := c.dropNamespace(namespacedRepository)
+	if err != nil {
 		return nil, "", err
 	}
 
@@ -109,11 +128,17 @@ func (c *artifactsHandler) GetRepository(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
-	repoName, tag, err := registry.ImageGetNameAndTag(r)
+	namespacedRepository, tag, err := registry.ImageGetNameAndTag(r)
 	if err != nil {
 		log.Printf("ERROR: %v\n", err)
 		registry.InternalServerError(w, r)
 	}
+	repoName, err := c.dropNamespace(namespacedRepository)
+	if err != nil {
+		log.Printf("ERROR: %v\n", err)
+		registry.InternalServerError(w, r)
+	}
+
 	fullname := fmt.Sprintf("%s:%s", repoName, tag)
 
 	log.Printf("Getting image %s", fullname)
@@ -147,7 +172,13 @@ func (c *artifactsHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Request) {
-	name, err := registry.RepoGetName(r)
+	namespacedRepository, err := registry.RepoGetName(r)
+	if err != nil {
+		log.Println("ERROR:", err)
+		registry.InternalServerError(w, r)
+		return
+	}
+	name, err := c.dropNamespace(namespacedRepository)
 	if err != nil {
 		log.Println("ERROR:", err)
 		registry.InternalServerError(w, r)
@@ -234,7 +265,6 @@ func (c *artifactsHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	log.Println("GetToken not implemented")
 	w.WriteHeader(http.StatusNotFound)
 	w.Write([]byte("not implemented\n"))
-	return
 }
 
 func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) {
@@ -279,6 +309,16 @@ func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) 
 	}
 	log.Printf("Compartment: %v\n", comp.Compartment)
 
+	objectClient, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(cfg)
+	if err != nil {
+		return nil, err
+	}
+	ns, err := objectClient.GetNamespace(context.Background(), objectstorage.GetNamespaceRequest{})
+	if err != nil {
+		return nil, err
+	}
+	namespace := *ns.Value
+
 	artifactsClient, err := artifacts.NewArtifactsClientWithConfigurationProvider(cfg)
 	if err != nil {
 		return nil, err
@@ -289,10 +329,12 @@ func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) 
 		compartmentId = tenancyID
 	}
 	log.Println("Compartment ID:", compartmentId)
+	log.Println("Namespace:", namespace)
 
 	artifactsH := &artifactsHandler{
 		compartmentId: compartmentId,
 		client:        &artifactsClient,
+		namespace:     namespace,
 	}
 
 	return artifactsH, nil
