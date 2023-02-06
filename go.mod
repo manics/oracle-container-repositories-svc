@@ -2,7 +2,7 @@ module github.com/manics/oracle-container-repositories-svc
 
 go 1.18
 
-require github.com/oracle/oci-go-sdk/v65 v65.28.2
+require github.com/oracle/oci-go-sdk/v65 v65.28.3
 
 require (
 	github.com/gofrs/flock v0.8.1 // indirect
@@ -11,4 +11,5 @@ require (
 )
 
 replace github.com/manics/oracle-container-repositories-svc/oracle => ./oracle
+
 replace github.com/manics/oracle-container-repositories-svc/utils => ../utils
