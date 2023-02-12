@@ -27,5 +27,5 @@ func main() {
 	}
 
 	listen := "0.0.0.0:8080"
-	common.Run(registryH, &versionInfo, listen)
+	common.Run(registryH, versionInfo, listen)
 }

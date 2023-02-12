@@ -45,14 +45,14 @@ func getAuthToken() (string, error) {
 }
 
 // The main entrypoint for the service
-func Run(registryH IRegistryClient, healthInfo *map[string]string, listen string) {
+func Run(registryH IRegistryClient, healthInfo map[string]string, listen string) {
 	authToken, err := getAuthToken()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	health := healthHandler{
-		healthInfo: healthInfo,
+		healthInfo: &healthInfo,
 	}
 
 	mux := http.NewServeMux()
