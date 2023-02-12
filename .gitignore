@@ -23,4 +23,6 @@ go.work
 # config file for testing
 *config
 *.pem
-binderhub-container-registry-helper
+
+./binderhub-amazon
+./binderhub-oracle

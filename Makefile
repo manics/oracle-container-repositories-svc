@@ -4,13 +4,14 @@ GOFLAGS = -ldflags "-X main.Version=$(VERSION)"
 default: test
 
 build:
-	go build $(GOFLAGS) .
+	go build $(GOFLAGS) ./cmd/binderhub-amazon
+	go build $(GOFLAGS) ./cmd/binderhub-oracle
 
 test: build
 	go test ./...
 
 clean:
-	rm -f binderhub-container-registry-helper
+	rm -f binderhub-amazon binderhub-oracle
 
 container:
-	podman build -t binderhub-container-registry-helper .
+	podman build -t binderhub-container-registry .

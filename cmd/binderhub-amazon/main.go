@@ -1,5 +1,3 @@
-// Based on https://golang.cafe/blog/golang-rest-api-example.html
-
 package main
 
 import (
@@ -8,7 +6,6 @@ import (
 
 	"github.com/manics/binderhub-container-registry-helper/amazon"
 	"github.com/manics/binderhub-container-registry-helper/common"
-	"github.com/manics/binderhub-container-registry-helper/oracle"
 )
 
 var (
@@ -20,25 +17,11 @@ var (
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %s [amazon|oracle] ...\n", os.Args[0])
-	}
-
 	versionInfo := map[string]string{
 		"version": Version,
 	}
-	var registryH common.IRegistryClient
-	var err error
 
-	provider := os.Args[1]
-	switch provider {
-	case "amazon":
-		registryH, err = amazon.Setup(os.Args[2:])
-	case "oracle":
-		registryH, err = oracle.Setup(os.Args[2:])
-	default:
-		log.Fatalf("Unknown provider: %s\n", provider)
-	}
+	registryH, err := amazon.Setup(os.Args[1:])
 	if err != nil {
 		log.Fatalf("ERROR: %s", err)
 	}

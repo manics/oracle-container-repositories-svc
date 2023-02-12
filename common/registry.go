@@ -1,3 +1,5 @@
+// Based on https://golang.cafe/blog/golang-rest-api-example.html
+
 // package common contains common types and functions used by implementations
 package common
 
