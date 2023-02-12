@@ -1,7 +1,7 @@
 # https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
 
 ###########################################################################
-FROM --platform=$BUILDPLATFORM golang:1.18-alpine AS build
+FROM --platform=$BUILDPLATFORM docker.io/library/golang:1.18-alpine AS build
 
 RUN apk add --no-cache make git
 
@@ -12,13 +12,14 @@ ARG TARGETOS TARGETARCH
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make build
 
 ###########################################################################
-FROM alpine:3.17
+FROM docker.io/library/alpine:3.17
 
-COPY --from=build /src/binderhub-container-registry-helper /bin
+COPY --from=build /src/binderhub-amazon /src/binderhub-oracle /bin/
 
 RUN adduser -S -D -H -h /app appuser
 USER appuser
 
-ENTRYPOINT ["/bin/binderhub-container-registry-helper"]
+# CMD [ "binderhub-amazon" ]
+# CMD [ "binderhub-oracle" ]
 
 EXPOSE 8080

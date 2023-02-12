@@ -14,4 +14,4 @@ clean:
 	rm -f binderhub-amazon binderhub-oracle
 
 container:
-	podman build -t binderhub-container-registry .
+	podman build -t binderhub-container-registry-helper .
