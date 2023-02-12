@@ -9,10 +9,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/manics/binderhub-container-registry-helper/registry"
-
 	"github.com/oracle/oci-go-sdk/v65/artifacts"
-	"github.com/oracle/oci-go-sdk/v65/common"
+	ocicommon "github.com/oracle/oci-go-sdk/v65/common"
+
+	"github.com/manics/binderhub-container-registry-helper/common"
 )
 
 // Helpers
@@ -54,8 +54,8 @@ type MockArtifactsClient struct {
 func (c *MockArtifactsClient) containerRepositorySummary(name string) *artifacts.ContainerRepositorySummary {
 	return &artifacts.ContainerRepositorySummary{
 		CompartmentId:     nil,
-		DisplayName:       common.String(name),
-		Id:                common.String("id-" + name),
+		DisplayName:       ocicommon.String(name),
+		Id:                ocicommon.String("id-" + name),
 		ImageCount:        nil,
 		IsPublic:          nil,
 		LayerCount:        nil,
@@ -70,8 +70,8 @@ func (c *MockArtifactsClient) containerRepository(name string) *artifacts.Contai
 	return &artifacts.ContainerRepository{
 		CompartmentId:     nil,
 		CreatedBy:         nil,
-		DisplayName:       common.String(name),
-		Id:                common.String("id-" + name),
+		DisplayName:       ocicommon.String(name),
+		Id:                ocicommon.String("id-" + name),
 		ImageCount:        nil,
 		IsImmutable:       nil,
 		IsPublic:          nil,
@@ -117,9 +117,9 @@ func (c *MockArtifactsClient) ListContainerImages(ctx context.Context, request a
 	c.listImagesRequests = append(c.listImagesRequests, request)
 
 	existing := artifacts.ContainerImageSummary{
-		DisplayName:    common.String("existing-image:tag"),
-		Id:             common.String("id-existing-image:tag"),
-		RepositoryName: common.String("existing-image"),
+		DisplayName:    ocicommon.String("existing-image:tag"),
+		Id:             ocicommon.String("id-existing-image:tag"),
+		RepositoryName: ocicommon.String("existing-image"),
 	}
 
 	if *request.DisplayName == "existing-image:tag" {
@@ -208,7 +208,7 @@ func request(t *testing.T, method string, path string) (MockArtifactsClient, *ht
 		client:        &art,
 		namespace:     "namespace",
 	}
-	s := &registry.RegistryServer{
+	s := &common.RegistryServer{
 		Client: a,
 	}
 

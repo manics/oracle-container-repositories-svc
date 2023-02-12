@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/manics/binderhub-container-registry-helper/amazon"
+	"github.com/manics/binderhub-container-registry-helper/common"
 	"github.com/manics/binderhub-container-registry-helper/oracle"
-	"github.com/manics/binderhub-container-registry-helper/registry"
 )
 
 var (
@@ -27,7 +27,7 @@ func main() {
 	versionInfo := map[string]string{
 		"version": Version,
 	}
-	var registryH registry.IRegistryClient
+	var registryH common.IRegistryClient
 	var err error
 
 	provider := os.Args[1]
@@ -44,5 +44,5 @@ func main() {
 	}
 
 	listen := "0.0.0.0:8080"
-	registry.Run(registryH, &versionInfo, listen)
+	common.Run(registryH, &versionInfo, listen)
 }

@@ -129,8 +129,8 @@ make test
 For more detailed testing of a single module or test:
 
 ```
-go test -v ./registry/
-go test -v ./registry -run TestGetName
+go test -v ./common/
+go test -v ./common -run TestGetName
 ```
 
 Add a new module

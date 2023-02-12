@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/manics/binderhub-container-registry-helper/registry"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
+
+	"github.com/manics/binderhub-container-registry-helper/common"
 )
 
 type MockEcrClient struct {
@@ -207,7 +207,7 @@ func request(t *testing.T, method string, path string) (MockEcrClient, *http.Res
 		registryId: registryId,
 		client:     &ecrClient,
 	}
-	s := &registry.RegistryServer{
+	s := &common.RegistryServer{
 		Client: e,
 	}
 

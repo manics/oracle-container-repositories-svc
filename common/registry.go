@@ -1,5 +1,5 @@
-// Package registry contains common types and functions used by implementations
-package registry
+// package common contains common types and functions used by implementations
+package common
 
 import (
 	"encoding/json"
