@@ -30,13 +30,13 @@ make test
 Run with Oracle Cloud Infrastructure using a local [OCI configuration file `oci-config` and private key `oci_api_key.pem`](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/sdkconfig.htm):
 
 ```
-BINDERHUB_AUTH_TOKEN=secret-token ./binderhub-container-registry-helper oracle oci-config
+BINDERHUB_AUTH_TOKEN=secret-token ./binderhub-oracle oci-config
 ```
 
-Run with Amazon Web Services using the local [AWs credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html):
+Run with Amazon Web Services using the local [AWS credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html):
 
 ```
-BINDERHUB_AUTH_TOKEN=secret-token ./binderhub-container-registry-helper amazon
+BINDERHUB_AUTH_TOKEN=secret-token ./binderhub-amazon
 ```
 
 ## API endpoints

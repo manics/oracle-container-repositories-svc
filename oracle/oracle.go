@@ -13,7 +13,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/oracle/oci-go-sdk/identity"
 	"github.com/oracle/oci-go-sdk/v65/artifacts"
 	ocicommon "github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/common/auth"
@@ -309,18 +308,6 @@ func Setup(args []string) (common.IRegistryClient, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	identityClient, err := identity.NewIdentityClientWithConfigurationProvider(cfg)
-	if err != nil {
-		return nil, err
-	}
-	comp, err := identityClient.GetCompartment(context.Background(), identity.GetCompartmentRequest{
-		CompartmentId: &tenancyID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("Compartment: %v\n", comp.Compartment)
 
 	objectClient, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(cfg)
 	if err != nil {

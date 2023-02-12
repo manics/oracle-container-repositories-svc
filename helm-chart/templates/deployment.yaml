@@ -33,6 +33,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - binderhub-{{ .Values.cloud_provider }}
           env:
             - name: BINDERHUB_AUTH_TOKEN
               valueFrom:
@@ -43,8 +45,10 @@ spec:
                   name: {{ include "binderhub-container-registry-helper.fullname" . }}
                   key: auth_token
                   {{- end }}
-            - name: OCI_COMPARTMENT_ID
-              value: {{ .Values.oci_compartment_id }}
+            {{- if .Values.return_error_details }}
+            - name: RETURN_ERROR_DETAILS
+              value: "true"
+            {{- end }}
             {{- with .Values.extraEnv }}
               {{- toYaml . | nindent 12 }}
             {{- end }}

@@ -3,6 +3,9 @@ GOFLAGS = -ldflags "-X main.Version=$(VERSION)"
 
 default: test
 
+lint:
+	golangci-lint run
+
 build:
 	go build $(GOFLAGS) ./cmd/binderhub-amazon
 	go build $(GOFLAGS) ./cmd/binderhub-oracle
