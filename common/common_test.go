@@ -17,7 +17,7 @@ func TestAuthToken(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v", tc.authTokenEnvVar, tc.shouldError), func(t *testing.T) {
 			if tc.authTokenEnvVar != nil {
-				t.Setenv("AUTH_TOKEN", tc.authTokenEnvVar.(string))
+				t.Setenv("BINDERHUB_AUTH_TOKEN", tc.authTokenEnvVar.(string))
 			}
 
 			authToken, err := getAuthToken()

@@ -34,7 +34,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            - name: AUTH_TOKEN
+            - name: BINDERHUB_AUTH_TOKEN
               valueFrom:
                 secretKeyRef:
                   {{- if .Values.auth_existing_secret_name }}

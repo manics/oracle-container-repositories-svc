@@ -30,13 +30,13 @@ make test
 Run with Oracle Cloud Infrastructure using a local [OCI configuration file `oci-config` and private key `oci_api_key.pem`](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/sdkconfig.htm):
 
 ```
-AUTH_TOKEN=secret-token ./binderhub-container-registry-helper oracle oci-config
+BINDERHUB_AUTH_TOKEN=secret-token ./binderhub-container-registry-helper oracle oci-config
 ```
 
 Run with Amazon Web Services using the local [AWs credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html):
 
 ```
-AUTH_TOKEN=secret-token ./binderhub-container-registry-helper amazon
+BINDERHUB_AUTH_TOKEN=secret-token ./binderhub-container-registry-helper amazon
 ```
 
 ## API endpoints
@@ -73,7 +73,7 @@ podman build -t binderhub-container-registry-helper .
 
 ```
 podman run --rm -it \
-  -eAUTH_TOKEN=secret-token \
+  -eBINDERHUB_AUTH_TOKEN=secret-token \
   -eOCI_COMPARTMENT_ID=oci.compartment.id \
   -v ./oci-config:/oci-config:ro,z \
   -v ./oci_api_key.pem:/oci_api_key.pem:ro,z \
@@ -93,8 +93,8 @@ to authenticate with the cloud provider.
 
 The following environment variables are supported:
 
-- `AUTH_TOKEN`: Secret token used to authenticate callers who should set the `Authorization: Bearer {token}` header.
-  Set `AUTH_TOKEN=""` to disable authentication.
+- `BINDERHUB_AUTH_TOKEN`: Secret token used to authenticate callers who should set the `Authorization: Bearer {BINDERHUB_AUTH_TOKEN}` header.
+  Set `BINDERHUB_AUTH_TOKEN=""` to disable authentication.
 
 Amazon only:
 

@@ -2,11 +2,13 @@ package common
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 )
+
+const AUTH_TOKEN_ENV_VAR = "BINDERHUB_AUTH_TOKEN"
 
 // healthHandler is a http.handler that returns the version
 type healthHandler struct {
@@ -35,9 +37,9 @@ func (h *healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAuthToken() (string, error) {
-	authToken, found := os.LookupEnv("AUTH_TOKEN")
+	authToken, found := os.LookupEnv(AUTH_TOKEN_ENV_VAR)
 	if !found {
-		return "", errors.New("AUTH_TOKEN not found, set it to a secret token or '' to disable authentication")
+		return "", fmt.Errorf("%s not found, set it to a secret token or '' to disable authentication", AUTH_TOKEN_ENV_VAR)
 	}
 	return authToken, nil
 }
