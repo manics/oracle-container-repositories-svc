@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -49,10 +50,18 @@ func InternalServerError(w http.ResponseWriter, r *http.Request, errorResponse e
 	errObj := map[string]string{
 		"error": errorResponse.Error(),
 	}
-	jsonBytes, err := json.Marshal(errObj)
-	if err != nil {
-		log.Println("ERROR:", err)
-		jsonBytes = []byte(`{"error": "internal server error"}` + "\n")
+	jsonBytes := []byte(`{"error": "internal server error"}`)
+	var err error
+
+	return_error := strings.ToLower(os.Getenv("RETURN_ERROR_DETAILS"))
+	for _, v := range []string{"true", "1", "yes"} {
+		if return_error == v {
+			jsonBytes, err = json.Marshal(errObj)
+			if err != nil {
+				log.Println("ERROR:", err)
+			}
+			break
+		}
 	}
 	jsonBytes = append(jsonBytes, byte('\n'))
 	w.WriteHeader(http.StatusInternalServerError)

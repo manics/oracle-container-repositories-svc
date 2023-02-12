@@ -95,6 +95,7 @@ The following environment variables are supported:
 
 - `BINDERHUB_AUTH_TOKEN`: Secret token used to authenticate callers who should set the `Authorization: Bearer {BINDERHUB_AUTH_TOKEN}` header.
   Set `BINDERHUB_AUTH_TOKEN=""` to disable authentication.
+- `RETURN_ERROR_DETAILS`: If set to `1` internal error details will be returned in the response body to clients. This may include internal configuration information, only enable this for internal use. Default `0`.
 
 Amazon only:
 
