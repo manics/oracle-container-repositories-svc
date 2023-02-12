@@ -45,11 +45,11 @@ jobs:
         with:
           go-version: "1.18.x"
 
-      - name: Build
-        run: go build -v
+      - name: go build
+        run: make build
 
-      - name: Test with the Go CLI
-        run: go test
+      - name: go test
+        run: make test
 
   container:
     needs:
