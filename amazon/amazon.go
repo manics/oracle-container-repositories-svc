@@ -417,7 +417,7 @@ func envvarIntGreaterThanZero(envvar string) (int, error) {
 	return i, nil
 }
 
-func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) {
+func Setup(args []string) (registry.IRegistryClient, error) {
 	if len(args) != 0 {
 		return nil, errors.New("no arguments expected")
 	}

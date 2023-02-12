@@ -279,7 +279,7 @@ func (c *artifactsHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	registry.NotFound(w, r)
 }
 
-func Setup(mux *http.ServeMux, args []string) (registry.IRegistryClient, error) {
+func Setup(args []string) (registry.IRegistryClient, error) {
 	var cfg common.ConfigurationProvider
 	var err error
 
