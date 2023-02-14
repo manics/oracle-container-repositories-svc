@@ -65,6 +65,12 @@ Delete repository `foo/test` (ignores repositories that don't exist)
 curl -XDELETE -H'Authorization: Bearer secret-token' localhost:8080/repo/foo/test
 ```
 
+Get credentials for repository `foo/test` (only for Amazon, returns 404 for Oracle)
+
+```
+curl -H'Authorization: Bearer secret-token' localhost:8080/token/foo/test
+```
+
 ## Build and run container
 
 ```

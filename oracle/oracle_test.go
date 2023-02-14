@@ -424,3 +424,14 @@ func TestDelete(t *testing.T) {
 		})
 	}
 }
+
+func TestToken(t *testing.T) {
+	_, res, _, err := request(t, "GET", "/token")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if res.StatusCode != 404 {
+		t.Errorf("Expected StatusCode 404: %v", res.StatusCode)
+	}
+}

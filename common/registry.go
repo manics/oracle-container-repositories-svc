@@ -128,7 +128,7 @@ var (
 	listReposRe = regexp.MustCompile(`^/repos$`)
 	repoRe      = regexp.MustCompile(`^/repo/(\S+)$`)
 	imageRe     = regexp.MustCompile(`^/image/(\S+)$`)
-	tokenRe     = regexp.MustCompile(`^/token$`)
+	tokenRe     = regexp.MustCompile(`^/token(/\S+)?$`)
 )
 
 // IRegistryClient is an interface that all registry helpers must implement

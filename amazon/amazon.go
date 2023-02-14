@@ -5,6 +5,7 @@ package amazon
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,8 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
@@ -386,10 +389,30 @@ func (c *ecrHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := &common.RegistryToken{
+		// token is base64(username:password)
 		Token:   *token.AuthorizationData[0].AuthorizationToken,
 		Expires: *token.AuthorizationData[0].ExpiresAt,
 	}
-	jsonBytes, err := json.Marshal(resp)
+
+	decodedBytes, err := base64.StdEncoding.DecodeString(resp.Token)
+	if err != nil {
+		log.Println("ERROR:", err)
+		common.InternalServerError(w, r, err)
+		return
+	}
+	username, password, found := strings.Cut(string(decodedBytes), ":")
+	if !found {
+		err := fmt.Errorf("invalid token")
+		log.Println("ERROR:", err)
+		common.InternalServerError(w, r, err)
+	}
+
+	ret := map[string]string{
+		"username": username,
+		"password": password,
+		"expires":  resp.Expires.Format(time.RFC3339),
+	}
+	jsonBytes, err := json.Marshal(ret)
 	if err != nil {
 		log.Println("ERROR:", err)
 		common.InternalServerError(w, r, err)

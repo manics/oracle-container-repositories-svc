@@ -153,7 +153,7 @@ func (c *MockEcrClient) GetAuthorizationToken(ctx context.Context, input *ecr.Ge
 	return &ecr.GetAuthorizationTokenOutput{
 		AuthorizationData: []types.AuthorizationData{
 			{
-				AuthorizationToken: aws.String("token"),
+				AuthorizationToken: aws.String("QVdTOnRva2Vu"),
 				ExpiresAt:          aws.Time(timestamp()),
 			},
 		},
@@ -500,30 +500,44 @@ func TestDelete(t *testing.T) {
 }
 
 func TestToken(t *testing.T) {
-	ecrClient, res, data, err := request(t, "POST", "/token")
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	testCases := []struct {
+		suffix string
+	}{
+		{""},
+		{"/always/ignored"},
 	}
 
-	if res.StatusCode != 200 {
-		t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.suffix, func(t *testing.T) {
+			ecrClient, res, data, err := request(t, "POST", "/token"+tc.suffix)
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
 
-	ecrClient.assertCounts(t, map[string]int{
-		"getTokens": 1,
-	})
+			if res.StatusCode != 200 {
+				t.Errorf("Expected StatusCode 200: %v", res.StatusCode)
+			}
 
-	var result map[string]interface{}
-	err2 := json.Unmarshal([]byte(data), &result)
-	if err2 != nil {
-		t.Errorf("Unexpected error: %v", err2)
-	}
+			ecrClient.assertCounts(t, map[string]int{
+				"getTokens": 1,
+			})
 
-	if result["token"] != "token" {
-		t.Errorf("Expected token:'token': %v", result)
-	}
-	expectedExpires := "2023-01-01T12:34:56Z"
-	if result["expires"] != expectedExpires {
-		t.Errorf("Expected expires:'%v': %v", expectedExpires, result)
+			var result map[string]string
+			err2 := json.Unmarshal([]byte(data), &result)
+			if err2 != nil {
+				t.Errorf("Unexpected error: %v", err2)
+			}
+
+			expected := map[string]string{
+				"username": "AWS",
+				"password": "token",
+				"expires":  "2023-01-01T12:34:56Z",
+			}
+			for k, v := range expected {
+				if result[k] != v {
+					t.Errorf("Expected %s=%s: %v", k, v, result[k])
+				}
+			}
+		})
 	}
 }

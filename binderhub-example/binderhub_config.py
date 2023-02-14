@@ -19,24 +19,48 @@ class ExternalRegistryHelper(DockerRegistry):
         config=True,
     )
 
+    async def _request(self, endpoint, **kwargs):
+        client = httpclient.AsyncHTTPClient()
+        repo_url = f"{self.service_url}{endpoint}"
+        headers = {"Authorization": f"Bearer {self.auth_token}"}
+        repo = await client.fetch(repo_url, headers=headers, **kwargs)
+        return json.loads(repo.body.decode("utf-8"))
+
+    async def _get_image(self, image, tag):
+        repo_url = f"/image/{image}:{tag}"
+        self.log.debug(f"Checking whether image exists: {repo_url}")
+        try:
+            image_json = await self._request(repo_url)
+            return image_json
+        except httpclient.HTTPError as e:
+            if e.code == 404:
+                return None
+            else:
+                raise
+
     async def get_image_manifest(self, image, tag):
         """
-        If the container repository exists use the standard Docker Registry API
-        to check for the image tag.
-        Otherwise create the container repository.
+        Checks whether the image exists in the registry.
 
-        The full registry image URL has the form:
-        CONTAINER_REGISTRY/OCIR_NAMESPACE/OCIR_REPOSITORY_NAME:TAG
-        the BinderHub image is OCIR_NAMESPACE/OCIR_REPOSITORY_NAME
+        If the container repository doesn't exist create the repository.
+
+        The container repository name may not be the same as the BinderHub image name.
+
+        E.g. Oracle Container Registry (OCIR) has the form:
+        OCIR_NAMESPACE/OCIR_REPOSITORY_NAME:TAG
+
+        These extra components are handled automatically by the registry helper
+        so BinderHub repository names such as OCIR_NAMESPACE/OCIR_REPOSITORY_NAME
+        can be used directly, it is not necessary to remove the extra components.
+
+        Returns the image manifest if the image exists, otherwise None
         """
-        client = httpclient.AsyncHTTPClient()
-        repo_url = f"{self.service_url}/repo/{image}"
-        headers = {"Authorization": f"Bearer {self.auth_token}"}
 
+        repo_url = f"/repo/{image}"
         self.log.debug(f"Checking whether repository exists: {repo_url}")
         try:
-            repo = await client.fetch(repo_url, headers=headers)
-            repo_exists = True
+            repo_json = await self._request(repo_url)
+            repo_exists = repo_json
         except httpclient.HTTPError as e:
             if e.code == 404:
                 repo_exists = False
@@ -44,12 +68,10 @@ class ExternalRegistryHelper(DockerRegistry):
                 raise
 
         if repo_exists:
-            repo_json = json.loads(repo.body.decode("utf-8"))
-            self.log.debug(f"Repository exists: {repo_json}")
-            return await super().get_image_manifest(image, tag)
+            return await self._get_image(image, tag)
         else:
             self.log.debug(f"Creating repository: {repo_url}")
-            await client.fetch(repo_url, headers=headers, method="POST", body="")
+            await self._request(repo_url, method="POST", body="")
             return None
 
 
