@@ -223,7 +223,7 @@ func request(t *testing.T, method string, path string) (MockEcrClient, *http.Res
 // Tests
 
 func TestList(t *testing.T) {
-	ecrClient, res, data, err := request(t, "GET", "/repos")
+	ecrClient, res, data, err := request(t, "GET", "/repos/")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

@@ -314,7 +314,7 @@ func TestGetImage(t *testing.T) {
 }
 
 func TestListRepos(t *testing.T) {
-	art, res, data, err := request(t, "GET", "/repos")
+	art, res, data, err := request(t, "GET", "/repos/")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

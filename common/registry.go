@@ -125,10 +125,10 @@ func ImageGetNameAndTag(r *http.Request) (string, string, error) {
 }
 
 var (
-	listReposRe = regexp.MustCompile(`^/repos$`)
+	listReposRe = regexp.MustCompile(`^/repos/$`)
 	repoRe      = regexp.MustCompile(`^/repo/(\S+)$`)
 	imageRe     = regexp.MustCompile(`^/image/(\S+)$`)
-	tokenRe     = regexp.MustCompile(`^/token(/\S+)?$`)
+	tokenRe     = regexp.MustCompile(`^/token(/\S*)?$`)
 )
 
 // IRegistryClient is an interface that all registry helpers must implement
@@ -169,6 +169,7 @@ func (h *RegistryServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.Client.GetToken(w, r)
 		return
 	default:
+		log.Printf("Invalid request: %s %s", r.Method, r.URL.Path)
 		NotFound(w, r)
 		return
 	}
@@ -181,8 +182,8 @@ func CreateServer(mux *http.ServeMux, registryH IRegistryClient, authToken strin
 	}
 	h := CheckAuthorised(serverH, authToken)
 
-	mux.Handle("/repos", h)
+	mux.Handle("/repos/", h)
 	mux.Handle("/repo/", h)
 	mux.Handle("/image/", h)
-	mux.Handle("/token", h)
+	mux.Handle("/token/", h)
 }

@@ -44,7 +44,7 @@ BINDERHUB_AUTH_TOKEN=secret-token ./binderhub-amazon
 List repositories
 
 ```
-curl -H'Authorization: Bearer secret-token' localhost:8080/repos
+curl -H'Authorization: Bearer secret-token' localhost:8080/repos/
 ```
 
 Create repository `foo/test` (ignores repositories that already exist)
