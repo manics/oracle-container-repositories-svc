@@ -3,11 +3,18 @@ GOFLAGS = -ldflags "-X main.Version=$(VERSION)"
 
 default: test
 
+lint:
+	golangci-lint run
+
 build:
-	go build $(GOFLAGS) .
+	go build $(GOFLAGS) ./cmd/binderhub-amazon
+	go build $(GOFLAGS) ./cmd/binderhub-oracle
 
 test: build
-	go test -v ./...
+	go test ./...
 
 clean:
-	rm -f oracle-container-repositories-svc
+	rm -f binderhub-amazon binderhub-oracle
+
+container:
+	podman build -t binderhub-container-registry-helper .

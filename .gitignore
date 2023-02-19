@@ -23,4 +23,6 @@ go.work
 # config file for testing
 *config
 *.pem
-oracle-container-repositories-svc
+
+/binderhub-amazon
+/binderhub-oracle

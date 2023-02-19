@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "oracle-container-repositories-svc.fullname" . }}
+  name: {{ include "binderhub-container-registry-helper.fullname" . }}
   labels:
-    {{- include "oracle-container-repositories-svc.labels" . | nindent 4 }}
+    {{- include "binderhub-container-registry-helper.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "oracle-container-repositories-svc.selectorLabels" . | nindent 6 }}
+      {{- include "binderhub-container-registry-helper.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,13 +18,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "oracle-container-repositories-svc.selectorLabels" . | nindent 8 }}
+        {{- include "binderhub-container-registry-helper.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "oracle-container-repositories-svc.serviceAccountName" . }}
+      serviceAccountName: {{ include "binderhub-container-registry-helper.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -33,18 +33,22 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - binderhub-{{ .Values.cloud_provider }}
           env:
-            - name: AUTH_TOKEN
+            - name: BINDERHUB_AUTH_TOKEN
               valueFrom:
                 secretKeyRef:
                   {{- if .Values.auth_existing_secret_name }}
                   name: {{ .Values.auth_existing_secret_name }}
                   {{- else }}
-                  name: {{ include "oracle-container-repositories-svc.fullname" . }}
+                  name: {{ include "binderhub-container-registry-helper.fullname" . }}
                   key: auth_token
                   {{- end }}
-            - name: OCI_COMPARTMENT_ID
-              value: {{ .Values.oci_compartment_id }}
+            {{- if .Values.return_error_details }}
+            - name: RETURN_ERROR_DETAILS
+              value: "true"
+            {{- end }}
             {{- with .Values.extraEnv }}
               {{- toYaml . | nindent 12 }}
             {{- end }}

@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "oracle-container-repositories-svc.fullname" . }}
+  name: {{ include "binderhub-container-registry-helper.fullname" . }}
   labels:
-    {{- include "oracle-container-repositories-svc.labels" . | nindent 4 }}
+    {{- include "binderhub-container-registry-helper.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "oracle-container-repositories-svc.fullname" . }}
+    name: {{ include "binderhub-container-registry-helper.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

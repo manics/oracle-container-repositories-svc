@@ -1,6 +1,6 @@
 apiVersion: v2
-name: oracle-container-repositories-svc
-description: Oracle Cloud Infrastructure Registry Micro service
+name: binderhub-container-registry-helper
+description: A microservice to help BinderHub work with Public cloud container registries
 type: application
 version: 0.1.0
 appVersion: "0.0.0"

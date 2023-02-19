@@ -1,9 +1,12 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/manics/oracle-container-repositories-svc
+  repository: ghcr.io/manics/binderhub-container-registry-helper
   pullPolicy: IfNotPresent
   tag: "0.1.0"
+
+# Either "oracle" or "amazon"
+cloud_provider: amazon
 
 imagePullSecrets: []
 nameOverride: ""
@@ -13,11 +16,15 @@ fullnameOverride: ""
 auth_token: "secret-token"
 auth_existing_secret_name: ""
 
-# OCI compartment ID
-oci_compartment_id: ""
+# Whether to return verbose error messages to callers
+return_error_details: True
 
 # Array of additional Kubernetes environment variables
 # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#environment-variables
+# E.g. To set The Oracle compartment
+# extraEnv:
+#   - name: OCI_COMPARTMENT_ID
+#     value: compartment-id
 extraEnv: []
 
 serviceAccount:

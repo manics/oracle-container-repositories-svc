@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "oracle-container-repositories-svc.name" -}}
+{{- define "binderhub-container-registry-helper.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "oracle-container-repositories-svc.fullname" -}}
+{{- define "binderhub-container-registry-helper.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "oracle-container-repositories-svc.chart" -}}
+{{- define "binderhub-container-registry-helper.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "oracle-container-repositories-svc.labels" -}}
-helm.sh/chart: {{ include "oracle-container-repositories-svc.chart" . }}
-{{ include "oracle-container-repositories-svc.selectorLabels" . }}
+{{- define "binderhub-container-registry-helper.labels" -}}
+helm.sh/chart: {{ include "binderhub-container-registry-helper.chart" . }}
+{{ include "binderhub-container-registry-helper.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "oracle-container-repositories-svc.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "oracle-container-repositories-svc.name" . }}
+{{- define "binderhub-container-registry-helper.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "binderhub-container-registry-helper.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "oracle-container-repositories-svc.serviceAccountName" -}}
+{{- define "binderhub-container-registry-helper.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "oracle-container-repositories-svc.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "binderhub-container-registry-helper.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
