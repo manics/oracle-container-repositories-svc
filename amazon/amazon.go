@@ -142,6 +142,7 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("ERROR:", err)
 		common.InternalServerError(w, r, err)
+		return
 	}
 	fullname := fmt.Sprintf("%s:%s", repoName, tag)
 
