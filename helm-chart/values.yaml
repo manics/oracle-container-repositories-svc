@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/manics/binderhub-container-registry-helper
   pullPolicy: IfNotPresent
-  tag: "0.1.0"
+  tag: "0.2.0"
 
 # Either "oracle" or "amazon"
 cloud_provider: amazon
