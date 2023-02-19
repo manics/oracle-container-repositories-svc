@@ -77,6 +77,8 @@ curl -H'Authorization: Bearer secret-token' localhost:8080/token/foo/test
 podman build -t binderhub-container-registry-helper .
 ```
 
+Oracle Cloud Infrastructure:
+
 ```
 podman run --rm -it \
   -eBINDERHUB_AUTH_TOKEN=secret-token \
@@ -84,7 +86,20 @@ podman run --rm -it \
   -v ./oci-config:/oci-config:ro,z \
   -v ./oci_api_key.pem:/oci_api_key.pem:ro,z \
   -p8080:8080 \
-  binderhub-container-registry-helper oracle /oci-config
+  binderhub-container-registry-helper binderhub-oracle /oci-config
+```
+
+Amazon Web Services:
+
+```
+podman run --rm -it \
+  -eBINDERHUB_AUTH_TOKEN=secret-token \
+  -eAWS_REGION=region \
+  -eAWS_ACCESS_KEY_ID=access-key \
+  -eAWS_SECRET_ACCESS_KEY=seret-key \
+  -eRETURN_ERROR_DETAILS=1 \
+  -p8080:8080 \
+  binderhub-container-registry-helper binderhub-amazon
 ```
 
 ## Running in the cloud
