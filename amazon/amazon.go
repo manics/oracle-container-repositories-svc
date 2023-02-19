@@ -14,7 +14,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
@@ -388,13 +387,13 @@ func (c *ecrHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := &common.RegistryToken{
-		// token is base64(username:password)
-		Token:   *token.AuthorizationData[0].AuthorizationToken,
-		Expires: *token.AuthorizationData[0].ExpiresAt,
+	ret := &common.RegistryToken{
+		Expires:  *token.AuthorizationData[0].ExpiresAt,
+		Registry: *token.AuthorizationData[0].ProxyEndpoint,
 	}
 
-	decodedBytes, err := base64.StdEncoding.DecodeString(resp.Token)
+	// token is base64(username:password)
+	decodedBytes, err := base64.StdEncoding.DecodeString(*token.AuthorizationData[0].AuthorizationToken)
 	if err != nil {
 		log.Println("ERROR:", err)
 		common.InternalServerError(w, r, err)
@@ -407,11 +406,9 @@ func (c *ecrHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 		common.InternalServerError(w, r, err)
 	}
 
-	ret := map[string]string{
-		"username": username,
-		"password": password,
-		"expires":  resp.Expires.Format(time.RFC3339),
-	}
+	ret.Username = username
+	ret.Password = password
+
 	jsonBytes, err := json.Marshal(ret)
 	if err != nil {
 		log.Println("ERROR:", err)

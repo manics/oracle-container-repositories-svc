@@ -155,6 +155,7 @@ func (c *MockEcrClient) GetAuthorizationToken(ctx context.Context, input *ecr.Ge
 			{
 				AuthorizationToken: aws.String("QVdTOnRva2Vu"),
 				ExpiresAt:          aws.Time(timestamp()),
+				ProxyEndpoint:      aws.String("https://123456789012.dkr.ecr.us-east-1.amazonaws.com"),
 			},
 		},
 	}, nil
@@ -532,6 +533,7 @@ func TestToken(t *testing.T) {
 				"username": "AWS",
 				"password": "token",
 				"expires":  "2023-01-01T12:34:56Z",
+				"registry": "https://123456789012.dkr.ecr.us-east-1.amazonaws.com",
 			}
 			for k, v := range expected {
 				if result[k] != v {

@@ -15,11 +15,13 @@ import (
 	"time"
 )
 
-// RegistryToken is an object containing a Token that can be used to login to a registry
-// and an Expires time when the token will expire
+// RegistryToken is an object containing a username and password that can be used
+// to login to a registry and an Expires time when the token will expire
 type RegistryToken struct {
-	Token   string    `json:"token"`
-	Expires time.Time `json:"expires"`
+	Username string    `json:"username"`
+	Password string    `json:"password"`
+	Registry string    `json:"registry"`
+	Expires  time.Time `json:"expires"`
 }
 
 // CheckAuthorised wraps originalHandler to check for a valid Authorization header

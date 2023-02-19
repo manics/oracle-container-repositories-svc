@@ -60,19 +60,29 @@ class ExternalRegistryHelper(DockerRegistry):
         self.log.debug(f"Checking whether repository exists: {repo_url}")
         try:
             repo_json = await self._request(repo_url)
-            repo_exists = repo_json
         except httpclient.HTTPError as e:
             if e.code == 404:
-                repo_exists = False
+                repo_json = None
             else:
                 raise
 
-        if repo_exists:
+        if repo_json:
             return await self._get_image(image, tag)
         else:
             self.log.debug(f"Creating repository: {repo_url}")
             await self._request(repo_url, method="POST", body="")
             return None
+
+    async def get_credentials(self, image, tag):
+        token_url = f"/token/{image}:{tag}"
+        self.log.debug(f"Getting registry token: {token_url}")
+        token_json = None
+        try:
+            token_json = await self._request(token_url)
+        except httpclient.HTTPError as e:
+            if e.code != 404:
+                raise
+        return token_json
 
 
 c.BinderHub.registry_class = ExternalRegistryHelper
