@@ -2,7 +2,7 @@ module github.com/manics/binderhub-container-registry-helper
 
 go 1.18
 
-require github.com/oracle/oci-go-sdk/v65 v65.30.0
+require github.com/oracle/oci-go-sdk/v65 v65.32.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.17.4
