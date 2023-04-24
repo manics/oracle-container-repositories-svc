@@ -5,7 +5,7 @@ go 1.18
 require github.com/oracle/oci-go-sdk/v65 v65.30.0
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.17.4
+	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.13
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.18.3
 	github.com/aws/aws-sdk-go-v2/service/sts v1.18.3
