@@ -2,7 +2,7 @@ module github.com/manics/binderhub-container-registry-helper
 
 go 1.18
 
-require github.com/oracle/oci-go-sdk/v65 v65.30.0
+require github.com/oracle/oci-go-sdk/v65 v65.36.1
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.17.4
@@ -24,7 +24,7 @@ require (
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/sony/gobreaker v0.5.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
 )
 
 replace github.com/manics/binderhub-container-registry-helper/oracle => ./oracle
