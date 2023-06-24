@@ -20,7 +20,7 @@ container:
 	podman build -t binderhub-container-registry-helper .
 
 update-deps:
-	go get -u ./...
+	go get -t -u ./...
 	go mod tidy
 
 check-tags-updated:
