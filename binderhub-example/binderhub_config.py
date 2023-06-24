@@ -5,7 +5,6 @@ from binderhub.registry import DockerRegistry
 
 
 class ExternalRegistryHelper(DockerRegistry):
-
     service_url = Unicode(
         "http://binderhub-container-registry-helper:8080",
         allow_none=False,
