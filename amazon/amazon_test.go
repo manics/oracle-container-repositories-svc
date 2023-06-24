@@ -212,7 +212,7 @@ func request(t *testing.T, method string, path string) (MockEcrClient, *http.Res
 		Client: e,
 	}
 
-	req := httptest.NewRequest(method, path, nil)
+	req := httptest.NewRequest(method, path, http.NoBody)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	res := w.Result()
@@ -293,7 +293,7 @@ func TestGetRepositoryAsJson(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/repo/existing-image", nil)
+		req := httptest.NewRequest("GET", "/repo/existing-image", http.NoBody)
 		found, name, jsonBytes, err := e.getRepositoryAsJson(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -316,7 +316,7 @@ func TestGetRepositoryAsJson(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/repo/new-image", nil)
+		req := httptest.NewRequest("GET", "/repo/new-image", http.NoBody)
 		found, name, jsonBytes, err := e.getRepositoryAsJson(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)

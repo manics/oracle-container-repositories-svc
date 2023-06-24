@@ -35,7 +35,7 @@ func TestCheckAuthorised(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%v,%v,%v", tc.authToken, tc.clientToken, tc.expectedStatus), func(t *testing.T) {
 			a := CheckAuthorised(&mockHandler{}, tc.authToken)
-			req := httptest.NewRequest("GET", "/", nil)
+			req := httptest.NewRequest("GET", "/", http.NoBody)
 			if tc.clientToken != nil {
 				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tc.clientToken))
 			}
@@ -58,7 +58,7 @@ func TestCheckAuthorised(t *testing.T) {
 
 func TestGetName(t *testing.T) {
 	{
-		req := httptest.NewRequest("GET", "/existing-image", nil)
+		req := httptest.NewRequest("GET", "/existing-image", http.NoBody)
 		_, err := RepoGetName(req)
 		if err == nil {
 			t.Errorf("Expected error: %v", err)
@@ -66,7 +66,7 @@ func TestGetName(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/repo/existing-image", nil)
+		req := httptest.NewRequest("GET", "/repo/existing-image", http.NoBody)
 		r, err := RepoGetName(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -79,7 +79,7 @@ func TestGetName(t *testing.T) {
 
 func TestImageGetNameAndTag(t *testing.T) {
 	{
-		req := httptest.NewRequest("GET", "/image/existing-image", nil)
+		req := httptest.NewRequest("GET", "/image/existing-image", http.NoBody)
 		name, tag, err := ImageGetNameAndTag(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -93,7 +93,7 @@ func TestImageGetNameAndTag(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/image/existing-image:tag", nil)
+		req := httptest.NewRequest("GET", "/image/existing-image:tag", http.NoBody)
 		name, tag, err := ImageGetNameAndTag(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
