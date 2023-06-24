@@ -68,7 +68,7 @@ curl -XDELETE -H'Authorization: Bearer secret-token' localhost:8080/repo/foo/tes
 Get credentials for repository `foo/test` (only for Amazon, returns 404 for Oracle)
 
 ```
-curl -H'Authorization: Bearer secret-token' localhost:8080/token/foo/test
+curl -XPOST -H'Authorization: Bearer secret-token' localhost:8080/token/foo/test
 ```
 
 ## Build and run container
