@@ -158,7 +158,7 @@ func (c *ecrHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 		var awsErrImage *types.ImageNotFoundException
 		var awsErrRepo *types.RepositoryNotFoundException
 		if errors.As(err, &awsErrImage) || errors.As(err, &awsErrRepo) {
-			log.Printf("Repo '%s' not found\n", fullname)
+			log.Printf("Image '%s' not found\n", fullname)
 			common.NotFound(w, r)
 			return
 		}

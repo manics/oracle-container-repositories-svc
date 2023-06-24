@@ -5,7 +5,6 @@ from binderhub.registry import DockerRegistry
 
 
 class ExternalRegistryHelper(DockerRegistry):
-
     service_url = Unicode(
         "http://binderhub-container-registry-helper:8080",
         allow_none=False,
@@ -74,6 +73,12 @@ class ExternalRegistryHelper(DockerRegistry):
             return None
 
     async def get_credentials(self, image, tag):
+        """
+        Get the registry credentials for the given image and tag if supported
+        by the remote helper, otherwise returns None
+
+        Returns a dictionary of login fields.
+        """
         token_url = f"/token/{image}:{tag}"
         self.log.debug(f"Getting registry token: {token_url}")
         token_json = None

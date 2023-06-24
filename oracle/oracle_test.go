@@ -212,7 +212,7 @@ func request(t *testing.T, method string, path string) (MockArtifactsClient, *ht
 		Client: a,
 	}
 
-	req := httptest.NewRequest(method, path, nil)
+	req := httptest.NewRequest(method, path, http.NoBody)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	res := w.Result()
@@ -231,7 +231,7 @@ func TestGetByName(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/existing-image", nil)
+		req := httptest.NewRequest("GET", "/existing-image", http.NoBody)
 		_, _, err := a.getByName(req)
 		if err == nil {
 			t.Errorf("Expected error: %v", err)
@@ -239,7 +239,7 @@ func TestGetByName(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/repo/existing-image", nil)
+		req := httptest.NewRequest("GET", "/repo/existing-image", http.NoBody)
 		_, _, err := a.getByName(req)
 		if err == nil {
 			t.Errorf("Expected error: %v", err)
@@ -247,7 +247,7 @@ func TestGetByName(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/repo/incorrect-namespace/existing-image", nil)
+		req := httptest.NewRequest("GET", "/repo/incorrect-namespace/existing-image", http.NoBody)
 		_, _, err := a.getByName(req)
 		if err == nil {
 			t.Errorf("Expected error: %v", err)
@@ -255,7 +255,7 @@ func TestGetByName(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/repo/namespace/existing-image", nil)
+		req := httptest.NewRequest("GET", "/repo/namespace/existing-image", http.NoBody)
 		container, name, err := a.getByName(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -272,7 +272,7 @@ func TestGetByName(t *testing.T) {
 	}
 
 	{
-		req := httptest.NewRequest("GET", "/repo/namespace/new-image", nil)
+		req := httptest.NewRequest("GET", "/repo/namespace/new-image", http.NoBody)
 		container, name, err := a.getByName(req)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
