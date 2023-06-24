@@ -19,14 +19,14 @@ func getGitTag() (string, error) {
 		return "", err
 	}
 
-	return strings.TrimSpace(string(gitTag[:])), nil
+	return strings.TrimSpace(string(gitTag)), nil
 }
 
 // readValues reads a yaml file
-func readValues(filepath string) (map[string]interface{}, error) {
+func readValues(yamlfile string) (map[string]interface{}, error) {
 	values := make(map[string]interface{})
 
-	valuesFile, err := os.ReadFile(filepath)
+	valuesFile, err := os.ReadFile(yamlfile)
 	if err != nil {
 		return values, err
 	}
