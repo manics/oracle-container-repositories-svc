@@ -126,9 +126,16 @@ Oracle cloud infrastructure only:
 
 - `OCI_COMPARTMENT_ID`: OCI compartment or tenancy OCID if not the default.
 
-## BinderHub example
+## BinderHub example (Helm chart)
 
-Deploy the Helm chart, see [`Values.yaml`](./helm-chart/values.yaml) for configuration options.
+This repository includes an OCI Helm chart to deploy this service to a Kubernetes cluster.
+Deploy the OCI Helm chart, see [`Values.yaml`](./helm-chart/values.yaml) for configuration options.
+
+```
+helm show chart oci://ghcr.io/manics/binderhub-container-registry-helper/binderhub-container-registry-helper
+
+helm upgrade binderhub-container-registry-helper oci://ghcr.io/manics/binderhub-container-registry-helper/binderhub-container-registry-helper --version <VERSION>
+```
 
 Append this example [BinderHub configuration](binderhub-example/binderhub_config.py) to your BinderHub `extraConfig` section.
 For example:
