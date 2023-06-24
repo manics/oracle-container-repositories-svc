@@ -1,6 +1,6 @@
 module github.com/manics/binderhub-container-registry-helper
 
-go 1.18
+go 1.20
 
 require github.com/oracle/oci-go-sdk/v65 v65.41.1
 
