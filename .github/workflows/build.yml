@@ -54,6 +54,9 @@ jobs:
       - name: helm package
         run: helm package helm-chart
 
+      - name: check tags
+        run: make check-tags-updated
+
   container:
     needs:
       - lint

@@ -25,6 +25,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/sony/gobreaker v0.5.0 // indirect
 	golang.org/x/sys v0.9.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace github.com/manics/binderhub-container-registry-helper/oracle => ./oracle

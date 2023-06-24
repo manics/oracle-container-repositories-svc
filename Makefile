@@ -22,3 +22,6 @@ container:
 update-deps:
 	go get -u ./...
 	go mod tidy
+
+check-tags-updated:
+	go run ./ci/check_tags_updated.go helm-chart/
