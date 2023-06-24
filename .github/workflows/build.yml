@@ -10,14 +10,11 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  # Set to "" to publish container on tags only
-  # Set to "<branch-name>" to also publish on every push to <branch-name>
-  PUBLISH_BRANCH: ""
   PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
 
@@ -29,13 +26,18 @@ jobs:
 
       - uses: actions/setup-go@v4
         with:
-          go-version: "1.18.x"
+          go-version-file: ./go.mod
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
+        with:
+          # Workaround problem with golangci-lint-action trying to overwrite cache
+          # https://github.com/golangci/golangci-lint-action/issues/135
+          skip-pkg-cache: true
+          version: v1.53.3
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v3
@@ -43,7 +45,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.18.x"
+          go-version-file: ./go.mod
 
       - name: go build
         run: make build
@@ -51,23 +53,23 @@ jobs:
       - name: go test
         run: make test
 
+      - name: check tags
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: make check-tags-updated
+
+      - name: helm package
+        run: helm package helm-chart
+
   container:
     needs:
       - lint
       - build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         # with:
         #   fetch-depth: 0
-
-      # - name: Get other tags
-      #   id: gettags
-      #   uses: jupyterhub/action-major-minor-tag-calculator@v2
-      #   with:
-      #     githubToken: ${{ secrets.GITHUB_TOKEN }}
-      #     prefix: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:"
 
       - name: Docker meta
         id: meta
@@ -84,14 +86,16 @@ jobs:
 
       - name: Login to container registry
         uses: docker/login-action@v2
-        if: >
-          github.event_name == 'push' &&
-          (github.ref == format('refs/heads/{0}', env.PUBLISH_BRANCH) ||
-          startsWith(github.ref, 'refs/tags/'))
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to OCI Helm chart registry
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login --username ${{ github.actor }} --password-stdin ${{ env.REGISTRY }}
 
       - name: Build and push to container registry
         uses: docker/build-push-action@v4
@@ -102,9 +106,10 @@ jobs:
           # tags: ${{ join(fromJson(steps.gettags.outputs.tags)) }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          push: >
-            ${{
-              github.event_name == 'push' &&
-              github.ref == format('refs/heads/{0}', env.PUBLISH_BRANCH) ||
-              startsWith(github.ref, 'refs/tags/')
-            }}
+          push: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Package and push Helm chart
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          helm package helm-chart/
+          helm push binderhub-container-registry-helper-*.tgz oci://${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
