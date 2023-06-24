@@ -34,6 +34,7 @@ jobs:
           # Workaround problem with golangci-lint-action trying to overwrite cache
           # https://github.com/golangci/golangci-lint-action/issues/135
           skip-pkg-cache: true
+          version: v1.53.3
 
   build:
     runs-on: ubuntu-22.04
