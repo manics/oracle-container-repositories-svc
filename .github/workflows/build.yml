@@ -10,7 +10,10 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  CHART_REPOSITORY: ${{ github.repository }}
+  # Pushing images and OCI Helm charts to the same GHCR package doesn't work
+  # properly (Helm chart remains private), so use a different package repository
+  # for the Helm chart.
+  CHART_REPOSITORY: ${{ github.repository_owner }}/oci-helm-charts
   PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
