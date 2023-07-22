@@ -132,9 +132,9 @@ This repository includes an OCI Helm chart to deploy this service to a Kubernete
 Deploy the OCI Helm chart, see [`Values.yaml`](./helm-chart/values.yaml) for configuration options.
 
 ```
-helm show chart oci://ghcr.io/manics/binderhub-container-registry-helper/binderhub-container-registry-helper
+helm show chart oci://ghcr.io/manics/oci-helm-charts/binderhub-container-registry-helper
 
-helm upgrade binderhub-container-registry-helper oci://ghcr.io/manics/binderhub-container-registry-helper/binderhub-container-registry-helper --version <VERSION>
+helm upgrade binderhub-container-registry-helper oci://ghcr.io/manics/oci-helm-charts/binderhub-container-registry-helper --version <VERSION>
 ```
 
 Append this example [BinderHub configuration](binderhub-example/binderhub_config.py) to your BinderHub `extraConfig` section.
