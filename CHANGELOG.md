@@ -1,3 +1,18 @@
+# 0.2.2 - 2023-10-05
+
+([full changelog](https://github.com/manics/binderhub-container-registry-helper/compare/0.2.1...0.2.2))
+
+## Merged PRs
+
+- Release 0.2.2 [#113](https://github.com/manics/binderhub-container-registry-helper/pull/113) ([@manics](https://github.com/manics))
+- Switch to quay.io [#112](https://github.com/manics/binderhub-container-registry-helper/pull/112) ([@manics](https://github.com/manics))
+- Update Go dependencies [#110](https://github.com/manics/binderhub-container-registry-helper/pull/110) ([@manics](https://github.com/manics))
+- Bump docker/metadata-action from 4 to 5 [#106](https://github.com/manics/binderhub-container-registry-helper/pull/106) ([@dependabot](https://github.com/dependabot))
+- Bump docker/setup-buildx-action from 2 to 3 [#105](https://github.com/manics/binderhub-container-registry-helper/pull/105) ([@dependabot](https://github.com/dependabot))
+- Bump actions/checkout from 3 to 4 [#104](https://github.com/manics/binderhub-container-registry-helper/pull/104) ([@dependabot](https://github.com/dependabot))
+- Bump docker/setup-qemu-action from 2 to 3 [#103](https://github.com/manics/binderhub-container-registry-helper/pull/103) ([@dependabot](https://github.com/dependabot))
+- Bump docker/login-action from 2 to 3 [#102](https://github.com/manics/binderhub-container-registry-helper/pull/102) ([@dependabot](https://github.com/dependabot))
+
 # 0.2.1 - 2023-07-22
 
 ([full changelog](https://github.com/manics/binderhub-container-registry-helper/compare/0.2.0...0.2.1))
