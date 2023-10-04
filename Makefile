@@ -19,6 +19,9 @@ clean:
 container:
 	podman build -t binderhub-container-registry-helper .
 
+helm:
+	helm package helm-chart
+
 update-deps:
 	go get -t -u ./...
 	go mod tidy
