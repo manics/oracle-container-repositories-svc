@@ -13,7 +13,8 @@ nameOverride: ""
 fullnameOverride: ""
 
 # Either specify the auth_token as a string or an existing secret with key "auth_token"
-auth_token: "secret-token"
+# Default is to autogenerate a random auth_token
+auth_token: ""
 auth_existing_secret_name: ""
 
 # Whether to return verbose error messages to callers

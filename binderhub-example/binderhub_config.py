@@ -1,4 +1,5 @@
 import json
+from os import getenv
 from tornado import httpclient
 from traitlets import Unicode
 from binderhub.registry import DockerRegistry
@@ -13,7 +14,7 @@ class ExternalRegistryHelper(DockerRegistry):
     )
 
     auth_token = Unicode(
-        "secret-token",
+        getenv("BINDERHUB_CONTAINER_REGISTRY_HELPER_AUTH_TOKEN"),
         help="The auth token to use when accessing the registry helper micro-service.",
         config=True,
     )
@@ -83,11 +84,17 @@ class ExternalRegistryHelper(DockerRegistry):
         self.log.debug(f"Getting registry token: {token_url}")
         token_json = None
         try:
-            token_json = await self._request(token_url)
+            token_json = await self._request(token_url, method="POST", body="")
         except httpclient.HTTPError as e:
             if e.code != 404:
                 raise
-        return token_json
+        self.log.debug(f"Token: {*token_json.keys(),}")
+        token = dict(
+            (k, v)
+            for (k, v) in token_json.items()
+            if k in ["username", "password", "registry"]
+        )
+        return token
 
 
 c.BinderHub.registry_class = ExternalRegistryHelper
