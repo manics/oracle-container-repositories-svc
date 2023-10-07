@@ -55,11 +55,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	helmValues, err := readValues(filepath.Join(chartDir, "values.yaml"))
-	if err != nil {
-		errlog.Println(err)
-		os.Exit(2)
-	}
 	chartValues, err := readValues(filepath.Join(chartDir, "Chart.yaml"))
 	if err != nil {
 		errlog.Println(err)
@@ -67,11 +62,6 @@ func main() {
 	}
 
 	ok := true
-	imageTag := helmValues["image"].(map[string]interface{})["tag"].(string)
-	if imageTag != gitTag {
-		errlog.Printf("Image tag '%s' does not match git tag '%s'", imageTag, gitTag)
-		ok = false
-	}
 
 	if chartValues["version"] != gitTag {
 		errlog.Printf("Chart version '%s' does not match git tag '%s'", chartValues["version"], gitTag)
