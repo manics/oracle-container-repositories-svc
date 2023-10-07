@@ -60,3 +60,20 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Generate a random auth_token if one doesn't already exist
+https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/78bec62d591b7a97560c37edd79c7a15186fcfe9/jupyterhub/templates/hub/_helpers-passwords.tpl#L34-L47
+*/}}
+{{- define "binderhub-container-registry-helper.auth_token" -}}
+  {{- if .Values.auth_token }}
+    {{- .Values.auth_token }}
+  {{- else }}
+    {{- $k8s_state := lookup "v1" "Secret" .Release.Namespace (include "binderhub-container-registry-helper.fullname" .) | default (dict "data" (dict)) }}
+    {{- if hasKey $k8s_state.data "auth_token" }}
+        {{- index $k8s_state.data "auth_token" | b64dec }}
+    {{- else }}
+        {{- randAlphaNum 64 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
