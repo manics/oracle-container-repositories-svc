@@ -1,3 +1,12 @@
+# 0.2.3 - 2023-10-07
+
+([full changelog](https://github.com/manics/binderhub-container-registry-helper/compare/0.2.2...0.2.3))
+
+## Merged PRs
+
+- Release 0.2.3 [#115](https://github.com/manics/binderhub-container-registry-helper/pull/115) ([@manics](https://github.com/manics))
+- Autogenerate random auth token [#114](https://github.com/manics/binderhub-container-registry-helper/pull/114) ([@manics](https://github.com/manics))
+
 # 0.2.2 - 2023-10-05
 
 ([full changelog](https://github.com/manics/binderhub-container-registry-helper/compare/0.2.1...0.2.2))
