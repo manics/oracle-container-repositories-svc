@@ -2,5 +2,5 @@ apiVersion: v2
 name: binderhub-container-registry-helper
 description: A microservice to help BinderHub work with Public cloud container registries
 type: application
-version: 0.2.2
-appVersion: 0.2.2
+version: 0.2.3
+appVersion: 0.2.3

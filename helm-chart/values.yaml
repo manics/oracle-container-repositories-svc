@@ -3,7 +3,8 @@ replicaCount: 1
 image:
   repository: quay.io/manics/binderhub-container-registry-helper
   pullPolicy: IfNotPresent
-  tag: 0.2.2
+  # Default is chart.appVersion
+  tag:
 
 # Either "oracle" or "amazon"
 cloud_provider: amazon
