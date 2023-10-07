@@ -4,6 +4,7 @@
 
 ## Merged PRs
 
+- Use chart.appVersion for image.tag [#116](https://github.com/manics/binderhub-container-registry-helper/pull/116) ([@manics](https://github.com/manics))
 - Release 0.2.3 [#115](https://github.com/manics/binderhub-container-registry-helper/pull/115) ([@manics](https://github.com/manics))
 - Autogenerate random auth token [#114](https://github.com/manics/binderhub-container-registry-helper/pull/114) ([@manics](https://github.com/manics))
 
