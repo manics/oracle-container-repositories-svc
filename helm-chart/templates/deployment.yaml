@@ -43,8 +43,8 @@ spec:
                   name: {{ .Values.auth_existing_secret_name }}
                   {{- else }}
                   name: {{ include "binderhub-container-registry-helper.fullname" . }}
-                  key: auth_token
                   {{- end }}
+                  key: auth_token
             {{- if .Values.return_error_details }}
             - name: RETURN_ERROR_DETAILS
               value: "true"
