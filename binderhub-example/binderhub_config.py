@@ -35,8 +35,7 @@ class ExternalRegistryHelper(DockerRegistry):
         except httpclient.HTTPError as e:
             if e.code == 404:
                 return None
-            else:
-                raise
+            raise
 
     async def get_image_manifest(self, image, tag):
         """
@@ -86,8 +85,9 @@ class ExternalRegistryHelper(DockerRegistry):
         try:
             token_json = await self._request(token_url, method="POST", body="")
         except httpclient.HTTPError as e:
-            if e.code != 404:
-                raise
+            if e.code == 404:
+                return None
+            raise
         self.log.debug(f"Token: {*token_json.keys(),}")
         token = dict(
             (k, v)
