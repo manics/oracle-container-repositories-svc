@@ -2,8 +2,19 @@ apiVersion: v1
 entries:
   binderhub-container-registry-helper:
   - apiVersion: v2
+    appVersion: 0.2.4
+    created: "2023-11-03T20:42:37.141514074Z"
+    description: A microservice to help BinderHub work with Public cloud container
+      registries
+    digest: ee3119944297de1f81c38c757ff30a8118ee0f4b97a3c34881140e3549311704
+    name: binderhub-container-registry-helper
+    type: application
+    urls:
+    - binderhub-container-registry-helper-0.2.4.tgz
+    version: 0.2.4
+  - apiVersion: v2
     appVersion: 0.2.3
-    created: "2023-10-07T20:18:39.155033846+01:00"
+    created: "2023-11-03T20:42:37.141136684Z"
     description: A microservice to help BinderHub work with Public cloud container
       registries
     digest: 678be7244d4f033953bb1e80a30dfd6cd79508b6474e2263be614c64f9abab21
@@ -14,7 +25,7 @@ entries:
     version: 0.2.3
   - apiVersion: v2
     appVersion: 0.2.2
-    created: "2023-10-07T20:18:39.154494281+01:00"
+    created: "2023-11-03T20:42:37.140777016Z"
     description: A microservice to help BinderHub work with Public cloud container
       registries
     digest: 9a5a023918de5840aa1bf3504d2ad329a0ac5732976da0b7f058de316117e3a7
@@ -25,7 +36,7 @@ entries:
     version: 0.2.2
   - apiVersion: v2
     appVersion: 0.2.1
-    created: "2023-10-07T20:18:39.15402436+01:00"
+    created: "2023-11-03T20:42:37.140392062Z"
     description: A microservice to help BinderHub work with Public cloud container
       registries
     digest: fee85b78764923725c2cf6d694c13c9ab87a4d6ce9057ab55e0fd45f797e8b0f
@@ -36,7 +47,7 @@ entries:
     version: 0.2.1
   - apiVersion: v2
     appVersion: 0.2.0
-    created: "2023-10-07T20:18:39.153476238+01:00"
+    created: "2023-11-03T20:42:37.139997008Z"
     description: A microservice to help BinderHub work with Public cloud container
       registries
     digest: 832ee743d157c3a113fa492ecf39d95f24f54b25f49481482ec0216b1944a4be
@@ -45,4 +56,4 @@ entries:
     urls:
     - binderhub-container-registry-helper-0.2.0.tgz
     version: 0.2.0
-generated: "2023-10-07T20:18:39.152756288+01:00"
+generated: "2023-11-03T20:42:37.139459941Z"
