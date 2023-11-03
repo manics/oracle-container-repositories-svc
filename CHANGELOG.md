@@ -1,3 +1,17 @@
+# 0.2.4 - 2023-11-03
+
+([full changelog](https://github.com/manics/binderhub-container-registry-helper/compare/0.2.3...0.2.4))
+
+## Merged PRs
+
+- Add check of custom helm values [#131](https://github.com/manics/binderhub-container-registry-helper/pull/131) ([@manics](https://github.com/manics))
+- Update all Go dependencies [#130](https://github.com/manics/binderhub-container-registry-helper/pull/130) ([@manics](https://github.com/manics))
+- Add priorityClassName [#129](https://github.com/manics/binderhub-container-registry-helper/pull/129) ([@manics](https://github.com/manics))
+- Bump the minor group with 3 updates [#124](https://github.com/manics/binderhub-container-registry-helper/pull/124) ([@dependabot](https://github.com/dependabot))
+- Bump docker/build-push-action from 4 to 5 [#123](https://github.com/manics/binderhub-container-registry-helper/pull/123) ([@dependabot](https://github.com/dependabot))
+- Fix token None in example config [#118](https://github.com/manics/binderhub-container-registry-helper/pull/118) ([@manics](https://github.com/manics))
+- Switch to GitHub pages for Helm chart [#117](https://github.com/manics/binderhub-container-registry-helper/pull/117) ([@manics](https://github.com/manics))
+
 # 0.2.3 - 2023-10-07
 
 ([full changelog](https://github.com/manics/binderhub-container-registry-helper/compare/0.2.2...0.2.3))
