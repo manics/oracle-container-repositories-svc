@@ -1,0 +1,9 @@
+# Check the rendered Helm chart is valid with custom values
+
+auth_token: secret-token
+
+extraEnv:
+  - name: OCI_COMPARTMENT_ID
+    value: compartment-id
+
+priorityClassName: ""
