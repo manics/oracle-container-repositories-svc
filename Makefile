@@ -1,6 +1,8 @@
 VERSION := $(shell git describe --tags --always HEAD)
 GOFLAGS = -ldflags "-X main.Version=$(VERSION)"
 
+VALIDATE_KUBERNETES_VERSION ?= 1.23.0
+
 default: test
 
 lint:
@@ -21,6 +23,10 @@ container:
 
 helm:
 	helm package helm-chart
+
+helm-check-values:
+	helm lint helm-chart/
+	helm template helm-chart/ --values ci/helm-check-values.yaml | kubeconform -strict -verbose -kubernetes-version $(VALIDATE_KUBERNETES_VERSION)
 
 update-deps:
 	go get -t -u ./...
