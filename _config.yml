@@ -1,0 +1,8 @@
+# Jekyll configuration file
+
+# https://github.com/pages-themes/minimal
+theme: jekyll-theme-minimal
+
+title: BinderHub Container Registry Helper Helm Chart
+description: |
+  A microservice to help <a href="https://binderhub.readthedocs.io/">BinderHub</a> work with Public cloud container registries.
