@@ -6,7 +6,7 @@ require github.com/oracle/oci-go-sdk/v65 v65.52.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.22.1
-	github.com/aws/aws-sdk-go-v2/config v1.22.0
+	github.com/aws/aws-sdk-go-v2/config v1.22.1
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.22.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.25.0
 	gopkg.in/yaml.v3 v3.0.1
