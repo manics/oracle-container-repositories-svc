@@ -27,12 +27,12 @@ jobs:
           go-version-file: ./go.mod
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         with:
           # Workaround problem with golangci-lint-action trying to overwrite cache
           # https://github.com/golangci/golangci-lint-action/issues/135
           skip-pkg-cache: true
-          version: v1.53.3
+          version: v1.56.2
 
       - name: Install kubeconform
         run: curl -sfL https://github.com/yannh/kubeconform/releases/download/v0.6.3/kubeconform-linux-amd64.tar.gz | tar -C /usr/local/bin -xzf - kubeconform
