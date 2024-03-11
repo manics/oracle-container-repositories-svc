@@ -6,9 +6,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
-const AUTH_TOKEN_ENV_VAR = "BINDERHUB_AUTH_TOKEN"
+const AUTH_TOKEN_ENV_VAR = "BINDERHUB_AUTH_TOKEN" // #nosec G101 -- Name of an env-var, not a secret
 
 // healthHandler is a http.handler that returns the version
 type healthHandler struct {
@@ -61,7 +62,13 @@ func Run(registryH IRegistryClient, healthInfo map[string]string, listen string)
 	CreateServer(mux, registryH, authToken)
 
 	log.Printf("Listening on %v\n", listen)
-	errw := http.ListenAndServe(listen, mux)
+	server := &http.Server{
+		Addr:         listen,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+	errw := server.ListenAndServe()
 	if errw != nil {
 		log.Fatalln(errw)
 	}
