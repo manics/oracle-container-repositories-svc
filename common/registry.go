@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // RegistryToken is an object containing a username and password that can be used
@@ -23,6 +25,12 @@ type RegistryToken struct {
 	Registry string    `json:"registry"`
 	Expires  time.Time `json:"expires"`
 }
+
+var httpDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	Namespace: "binderhub_container_registry_helper",
+	Name:      "api_response_time_seconds",
+	Help:      "Duration of API requests.",
+}, []string{"method", "path", "status"})
 
 // CheckAuthorised wraps originalHandler to check for a valid Authorization header
 // and returns a http.Handler
@@ -148,6 +156,35 @@ type RegistryServer struct {
 	Client IRegistryClient
 }
 
+// statusRecorder records the status code from the ResponseWriter
+type statusRecorder struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+// WriteHeader records and writes the status code
+func (rec *statusRecorder) WriteHeader(statusCode int) {
+	rec.statusCode = statusCode
+	rec.ResponseWriter.WriteHeader(statusCode)
+}
+
+// prometheusMiddleware wraps originalHandler to record the duration of requests
+func prometheusMiddleware(originalHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		components := strings.Split(r.URL.Path, "/")
+		path := "/"
+		if len(components) > 1 {
+			path = fmt.Sprintf("/%s", components[1])
+		}
+
+		rw := statusRecorder{w, 0}
+
+		originalHandler.ServeHTTP(&rw, r)
+		httpDuration.WithLabelValues(r.Method, path, fmt.Sprintf("%d", rw.statusCode)).Observe(time.Since(start).Seconds())
+	})
+}
+
 // ServeHTTP passes requests to the registry helper implementation
 func (h *RegistryServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
@@ -178,14 +215,17 @@ func (h *RegistryServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateServer configures a new http handler for the registry helper
-func CreateServer(mux *http.ServeMux, registryH IRegistryClient, authToken string) {
+func CreateServer(mux *http.ServeMux, registryH IRegistryClient, authToken string, promRegistry *prometheus.Registry) {
 	serverH := &RegistryServer{
 		Client: registryH,
 	}
-	h := CheckAuthorised(serverH, authToken)
+	authorisedH := CheckAuthorised(serverH, authToken)
+	h := prometheusMiddleware(authorisedH)
 
 	mux.Handle("/repos/", h)
 	mux.Handle("/repo/", h)
 	mux.Handle("/image/", h)
 	mux.Handle("/token/", h)
+
+	promRegistry.MustRegister(httpDuration)
 }

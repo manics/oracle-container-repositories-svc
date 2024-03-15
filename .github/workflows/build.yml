@@ -42,6 +42,11 @@ jobs:
 
   build:
     runs-on: ubuntu-22.04
+    services:
+      localstack:
+        image: docker.io/localstack/localstack:3.2.0
+        ports:
+          - 4566:4566
 
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +60,7 @@ jobs:
         run: make build
 
       - name: go test
-        run: make test
+        run: make test-integration
 
       - name: check tags
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')

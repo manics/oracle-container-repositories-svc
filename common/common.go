@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const AUTH_TOKEN_ENV_VAR = "BINDERHUB_AUTH_TOKEN" // #nosec G101 -- Name of an env-var, not a secret
@@ -46,7 +49,12 @@ func getAuthToken() (string, error) {
 }
 
 // The main entrypoint for the service
-func Run(registryH IRegistryClient, healthInfo map[string]string, listen string) {
+func Run(registryH IRegistryClient, healthInfo map[string]string, listen string, promRegistry *prometheus.Registry) {
+	promHandler := promhttp.HandlerFor(
+		promRegistry,
+		promhttp.HandlerOpts{EnableOpenMetrics: true},
+	)
+
 	authToken, err := getAuthToken()
 	if err != nil {
 		log.Fatalln(err)
@@ -58,8 +66,9 @@ func Run(registryH IRegistryClient, healthInfo map[string]string, listen string)
 
 	mux := http.NewServeMux()
 	mux.Handle("/health", &health)
+	mux.Handle("/metrics", promHandler)
 
-	CreateServer(mux, registryH, authToken)
+	CreateServer(mux, registryH, authToken, promRegistry)
 
 	log.Printf("Listening on %v\n", listen)
 	server := &http.Server{

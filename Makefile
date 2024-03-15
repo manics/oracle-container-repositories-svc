@@ -13,7 +13,16 @@ build:
 	go build $(GOFLAGS) ./cmd/binderhub-oracle
 
 test: build
-	go test ./...
+	go test ./... -count=1
+
+# Assumes docker.io/localstack/localstack running on port 4566
+# Run all tests including integration tests
+test-integration: export AWS_ENDPOINT = http://localhost:4566
+test-integration: export AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
+test-integration: export AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
+test-integration: export AWS_REGION = us-east-1
+test-integration: build
+	go test ./... --tags=integration -count=1
 
 clean:
 	rm -f binderhub-amazon binderhub-oracle

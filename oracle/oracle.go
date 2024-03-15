@@ -18,6 +18,8 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"github.com/oracle/oci-go-sdk/v65/objectstorage"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/manics/binderhub-container-registry-helper/common"
 )
 
@@ -36,6 +38,12 @@ type artifactsHandler struct {
 	client        IArtifactsClient
 	namespace     string
 }
+
+var newRepositoriesCounter = prometheus.NewCounter(prometheus.CounterOpts{
+	Namespace: "binderhub_container_registry_helper",
+	Name:      "new_repositories_total",
+	Help:      "Total number of new repositories created",
+})
 
 func (c *artifactsHandler) ListRepositories(w http.ResponseWriter, r *http.Request) {
 	log.Println("Listing repos")
@@ -234,6 +242,8 @@ func (c *artifactsHandler) CreateRepository(w http.ResponseWriter, r *http.Reque
 			common.InternalServerError(w, r, err)
 			return
 		}
+	} else {
+		newRepositoriesCounter.Inc()
 	}
 
 	jsonBytes, err := json.Marshal(createResponse.ContainerRepository)
@@ -278,7 +288,7 @@ func (c *artifactsHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	common.NotFound(w, r)
 }
 
-func Setup(args []string) (common.IRegistryClient, error) {
+func Setup(promRegistry *prometheus.Registry, args []string) (common.IRegistryClient, error) {
 	var cfg ocicommon.ConfigurationProvider
 	var err error
 
@@ -336,6 +346,8 @@ func Setup(args []string) (common.IRegistryClient, error) {
 		client:        &artifactsClient,
 		namespace:     namespace,
 	}
+
+	promRegistry.MustRegister(newRepositoriesCounter)
 
 	return artifactsH, nil
 }

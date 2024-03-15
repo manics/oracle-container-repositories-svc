@@ -6,6 +6,9 @@ import (
 
 	"github.com/manics/binderhub-container-registry-helper/common"
 	"github.com/manics/binderhub-container-registry-helper/oracle"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
 var (
@@ -14,18 +17,26 @@ var (
 )
 
 // The main entrypoint for the service
-func main() {
+func run(args []string) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	versionInfo := map[string]string{
 		"version": Version,
 	}
 
-	registryH, err := oracle.Setup(os.Args[1:])
+	// Custom Prometheus registry to disable default go metrics
+	promRegistry := prometheus.NewRegistry()
+	promRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+
+	registryH, err := oracle.Setup(promRegistry, args)
 	if err != nil {
 		log.Fatalf("ERROR: %s", err)
 	}
 
 	listen := "0.0.0.0:8080"
-	common.Run(registryH, versionInfo, listen)
+	common.Run(registryH, versionInfo, listen, promRegistry)
+}
+
+func main() {
+	run(os.Args[1:])
 }
