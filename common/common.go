@@ -68,7 +68,7 @@ func Run(registryH IRegistryClient, healthInfo map[string]string, listen string,
 	mux.Handle("/health", &health)
 	mux.Handle("/metrics", promHandler)
 
-	CreateServer(mux, registryH, authToken)
+	CreateServer(mux, registryH, authToken, promRegistry)
 
 	log.Printf("Listening on %v\n", listen)
 	server := &http.Server{
