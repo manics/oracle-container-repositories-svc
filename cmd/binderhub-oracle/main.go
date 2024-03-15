@@ -17,7 +17,7 @@ var (
 )
 
 // The main entrypoint for the service
-func main() {
+func run(args []string) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	versionInfo := map[string]string{
@@ -28,11 +28,15 @@ func main() {
 	promRegistry := prometheus.NewRegistry()
 	promRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	registryH, err := oracle.Setup(promRegistry, os.Args[1:])
+	registryH, err := oracle.Setup(promRegistry, args)
 	if err != nil {
 		log.Fatalf("ERROR: %s", err)
 	}
 
 	listen := "0.0.0.0:8080"
 	common.Run(registryH, versionInfo, listen, promRegistry)
+}
+
+func main() {
+	run(os.Args[1:])
 }

@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
@@ -453,8 +454,23 @@ func Setup(promRegistry *prometheus.Registry, args []string) (common.IRegistryCl
 		return nil, errors.New("no arguments expected")
 	}
 
+	endpoint := os.Getenv("AWS_ENDPOINT")
+
 	// Automatically looks for a usable configuration
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	var cfg aws.Config
+	var err error
+
+	if endpoint == "" {
+		cfg, err = config.LoadDefaultConfig(context.TODO())
+	} else {
+		cfg, err = config.LoadDefaultConfig(context.TODO(),
+			// Optionally override the endpoint for testing
+			config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				return aws.Endpoint{
+					URL: endpoint,
+				}, nil
+			})))
+	}
 	if err != nil {
 		log.Printf("failed to load configuration, %v", err)
 		return nil, err
