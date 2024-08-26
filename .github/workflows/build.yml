@@ -20,19 +20,19 @@ jobs:
         with:
           python-version: "3.10"
 
-      - uses: pre-commit/action@v3.0.1
-
       - uses: actions/setup-go@v5
         with:
           go-version-file: ./go.mod
 
+      - uses: pre-commit/action@v3.0.1
+
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v5
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.58.0
+          version: v1.60.3
 
       - name: Install kubeconform
-        run: curl -sfL https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz | tar -C /usr/local/bin -xzf - kubeconform
+        run: curl -sfL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar -C /usr/local/bin -xzf - kubeconform
 
       - name: check helm chart custom values
         run: make helm-check-values
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-22.04
     services:
       localstack:
-        image: docker.io/localstack/localstack:3.2.0
+        image: docker.io/localstack/localstack:3.6.0
         ports:
           - 4566:4566
 
