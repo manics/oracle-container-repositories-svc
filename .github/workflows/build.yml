@@ -32,7 +32,7 @@ jobs:
           version: v1.60.3
 
       - name: Install kubeconform
-        run: curl -sfL https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz | tar -C /usr/local/bin -xzf - kubeconform
+        run: curl -sfL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar -C /usr/local/bin -xzf - kubeconform
 
       - name: check helm chart custom values
         run: make helm-check-values
