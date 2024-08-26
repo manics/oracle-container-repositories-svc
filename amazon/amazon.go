@@ -457,26 +457,19 @@ func Setup(promRegistry *prometheus.Registry, args []string) (common.IRegistryCl
 	endpoint := os.Getenv("AWS_ENDPOINT")
 
 	// Automatically looks for a usable configuration
-	var cfg aws.Config
-	var err error
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 
-	if endpoint == "" {
-		cfg, err = config.LoadDefaultConfig(context.TODO())
-	} else {
-		cfg, err = config.LoadDefaultConfig(context.TODO(),
-			// Optionally override the endpoint for testing
-			config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-				return aws.Endpoint{
-					URL: endpoint,
-				}, nil
-			})))
-	}
 	if err != nil {
 		log.Printf("failed to load configuration, %v", err)
 		return nil, err
 	}
 
-	stsClient := sts.NewFromConfig(cfg)
+	stsClient := sts.NewFromConfig(cfg, func(o *sts.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
+		}
+	})
+
 	identity, err := stsClient.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		log.Printf("failed to get identity, %v", err)
@@ -484,7 +477,11 @@ func Setup(promRegistry *prometheus.Registry, args []string) (common.IRegistryCl
 	}
 	log.Printf("Identity: %v", *identity.Arn)
 
-	ecrClient := ecr.NewFromConfig(cfg)
+	ecrClient := ecr.NewFromConfig(cfg, func(o *ecr.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
+		}
+	})
 
 	registryId := os.Getenv("AWS_REGISTRY_ID")
 	log.Println("Registry ID:", registryId)
